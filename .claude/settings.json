@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev)",
+      "Bash(npm run build)",
+      "Bash(npm run preview)",
+      "Bash(npm run format)",
+      "Bash(npm run format:check)",
+      "Bash(npm run lint)",
+      "Bash(npm run type-check)",
+      "Bash(npm run test)",
+      "Bash(npm run test:coverage)",
+      "Bash(npm run format:check && npm run lint && npm run type-check && npm run test:coverage)",
+      "Bash(git checkout -b *)",
+      "Bash(git branch *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "mcp__github__create_pull_request",
+      "mcp__github__list_pull_requests",
+      "mcp__github__pull_request_read"
+    ]
+  }
+}
