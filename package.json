@@ -1,0 +1,42 @@
+{
+  "name": "hungry-halflings-hearty-handbook",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -p tsconfig.app.json --noEmit && vite build",
+    "preview": "vite preview",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "type-check": "vue-tsc -p tsconfig.app.json --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "pinia": "^2.1.7",
+    "vue": "^3.4.0",
+    "vue-router": "^4.3.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@types/node": "^20.0.0",
+    "@vitejs/plugin-vue": "^5.0.0",
+    "@vitest/coverage-v8": "^2.0.0",
+    "@vue/test-utils": "^2.4.0",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-vue": "^9.25.0",
+    "husky": "^9.0.0",
+    "jsdom": "^24.0.0",
+    "prettier": "^3.2.0",
+    "typescript": "^5.4.0",
+    "typescript-eslint": "^8.0.0",
+    "vite": "^5.2.0",
+    "vite-plugin-pwa": "^0.20.0",
+    "vitest": "^2.0.0",
+    "vue-tsc": "^2.0.0"
+  }
+}
