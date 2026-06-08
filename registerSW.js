@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/hungry-halflings-hearty-handbook/sw.js', { scope: '/hungry-halflings-hearty-handbook/' })})}
