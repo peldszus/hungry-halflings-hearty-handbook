@@ -29,12 +29,16 @@ const weekDays = computed(() => {
   })
 })
 
+const recipeSelectItems = computed(() => [
+  { title: '— No meal —', value: '' },
+  ...recipesStore.recipes.map((r) => ({ title: r.name, value: r.id })),
+])
+
 function getSelectedRecipeId(date: string): string {
   return mealPlanStore.getForDate(date)?.recipeId ?? ''
 }
 
-function onRecipeChange(date: string, event: Event) {
-  const value = (event.target as HTMLSelectElement).value
+function onRecipeChange(date: string, value: string) {
   if (value) {
     mealPlanStore.assign(date, value)
   } else {
@@ -44,100 +48,32 @@ function onRecipeChange(date: string, event: Event) {
 </script>
 
 <template>
-  <div class="meal-plan">
-    <h1>Meal Plan</h1>
+  <v-container>
+    <h1 class="text-h4 text-primary mb-4">Meal Plan</h1>
 
-    <div class="week-nav">
-      <button @click="weekOffset--">Previous Week</button>
-      <span class="week-label">{{ weekDays[0].iso }} &mdash; {{ weekDays[6].iso }}</span>
-      <button @click="weekOffset++">Next Week</button>
+    <div class="d-flex align-center justify-space-between mb-4">
+      <v-btn icon="mdi-chevron-left" variant="tonal" @click="weekOffset--" />
+      <span class="text-body-2">{{ weekDays[0].iso }} — {{ weekDays[6].iso }}</span>
+      <v-btn icon="mdi-chevron-right" variant="tonal" @click="weekOffset++" />
     </div>
 
-    <div class="week-grid">
-      <div v-for="day in weekDays" :key="day.iso" class="day-cell">
-        <div class="day-label">{{ day.label }}</div>
-        <select :value="getSelectedRecipeId(day.iso)" @change="onRecipeChange(day.iso, $event)">
-          <option value="">— No meal —</option>
-          <option v-for="recipe in recipesStore.recipes" :key="recipe.id" :value="recipe.id">
-            {{ recipe.name }}
-          </option>
-        </select>
-      </div>
-    </div>
-  </div>
+    <v-row>
+      <v-col v-for="day in weekDays" :key="day.iso" cols="12" sm="6" md="4">
+        <v-card variant="outlined">
+          <v-card-title class="text-body-1">{{ day.label }}</v-card-title>
+          <v-card-text>
+            <v-select
+              :model-value="getSelectedRecipeId(day.iso)"
+              :items="recipeSelectItems"
+              item-title="title"
+              item-value="value"
+              density="compact"
+              hide-details
+              @update:model-value="(v: string) => onRecipeChange(day.iso, v)"
+            />
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+  </v-container>
 </template>
-
-<style scoped>
-.meal-plan {
-  padding: 1rem 0;
-}
-
-h1 {
-  font-size: 2rem;
-  color: #4a9c6f;
-  margin-bottom: 1.5rem;
-}
-
-.week-nav {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.week-label {
-  flex: 1;
-  text-align: center;
-  color: #555;
-  font-weight: 500;
-}
-
-.week-nav button {
-  background: #4a9c6f;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.week-nav button:hover {
-  background: #3d8460;
-}
-
-.week-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 0.75rem;
-}
-
-.day-cell {
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.day-label {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #555;
-}
-
-select {
-  width: 100%;
-  padding: 0.4rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 0.875rem;
-  background: white;
-}
-
-select:focus {
-  outline: none;
-  border-color: #4a9c6f;
-}
-</style>
