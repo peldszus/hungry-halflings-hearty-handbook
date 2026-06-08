@@ -1,6 +1,7 @@
 /// <reference types="vitest" />
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import vuetify from 'vite-plugin-vuetify'
 import { VitePWA } from 'vite-plugin-pwa'
 import { fileURLToPath, URL } from 'node:url'
 
@@ -8,6 +9,7 @@ export default defineConfig({
   base: process.env.VITE_BASE_URL ?? '/',
   plugins: [
     vue(),
+    vuetify({ autoImport: true }),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'pwa-192.png', 'pwa-512.png'],
@@ -33,11 +35,17 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    setupFiles: ['src/test-setup.ts'],
+    server: {
+      deps: {
+        inline: ['vuetify'],
+      },
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
       include: ['src/**/*.{ts,vue}'],
-      exclude: ['src/main.ts'],
+      exclude: ['src/main.ts', 'src/test-setup.ts'],
     },
   },
 })
