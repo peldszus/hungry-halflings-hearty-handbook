@@ -91,3 +91,7 @@ Hash-based routing (`#/recipes`) is used for full GitHub Pages compatibility.
 After opening a pull request, always subscribe to its activity and monitor it until it is
 merged or closed: watch CI and push fixes for failures, and respond to review comments
 (asking for clarification when a request is ambiguous).
+
+Note the limitation: subscriptions reliably deliver CI **failures** and review comments,
+but webhooks do not emit CI **success**, new pushes, or merge-conflict transitions. Without
+a self-scheduling mechanism, a passing or mergeable state may need a manual re-check.
