@@ -85,3 +85,9 @@ Hash-based routing (`#/recipes`) is used for full GitHub Pages compatibility.
 | Variable        | Default | Description                                                                                                                     |
 | --------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `VITE_BASE_URL` | `/`     | Asset base path — `/hungry-halflings-hearty-handbook/` for production, `/hungry-halflings-hearty-handbook/staging/` for staging |
+
+## Pull Requests
+
+After opening a pull request, always subscribe to its activity and monitor it until it is
+merged or closed: watch CI and push fixes for failures, and respond to review comments
+(asking for clarification when a request is ambiguous).
