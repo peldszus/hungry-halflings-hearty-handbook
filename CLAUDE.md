@@ -62,8 +62,19 @@ CI runs the same steps on every push, plus a final `npm run build`.
 
 ## Deployment
 
-Pushes to `main` automatically deploy to GitHub Pages via the `deploy` workflow.
-App URL: https://peldszus.github.io/hungry-halflings-hearty-handbook/
+Two environments are deployed to the same `gh-pages` branch:
+
+- **Production** — pushes to `main` deploy via the `deploy` workflow to the branch root.
+  URL: https://peldszus.github.io/hungry-halflings-hearty-handbook/
+- **Staging** — pushes to any branch _except_ `main` deploy via the `deploy-staging`
+  workflow to the `staging/` subdirectory.
+  URL: https://peldszus.github.io/hungry-halflings-hearty-handbook/staging/
+
+Staging is a single shared slot (last push to any non-`main` branch wins). The staging
+deploy uses `destination_dir: staging`, which scopes its cleanup to the `staging/` folder
+and leaves production untouched. The production deploy uses `keep_files: true` so it
+preserves the `staging/` folder rather than wiping the branch root. Both deploy workflows
+share a `github-pages` concurrency group so they never push to `gh-pages` at the same time.
 
 GitHub Pages must be configured once in repo Settings → Pages → Source → `gh-pages` branch.
 
@@ -71,6 +82,6 @@ Hash-based routing (`#/recipes`) is used for full GitHub Pages compatibility.
 
 ## Environment Variables
 
-| Variable        | Default | Description                                                         |
-| --------------- | ------- | ------------------------------------------------------------------- |
-| `VITE_BASE_URL` | `/`     | Asset base path — set to `/hungry-halflings-hearty-handbook/` in CI |
+| Variable        | Default | Description                                                                                                                     |
+| --------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `VITE_BASE_URL` | `/`     | Asset base path — `/hungry-halflings-hearty-handbook/` for production, `/hungry-halflings-hearty-handbook/staging/` for staging |

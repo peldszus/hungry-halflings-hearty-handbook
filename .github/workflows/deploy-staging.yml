@@ -1,8 +1,8 @@
-name: Deploy to GitHub Pages
+name: Deploy Staging to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches-ignore: [main]
 
 permissions:
   contents: write
@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  deploy-staging:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,11 +28,11 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          VITE_BASE_URL: /hungry-halflings-hearty-handbook/
+          VITE_BASE_URL: /hungry-halflings-hearty-handbook/staging/
 
-      - name: Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages (staging)
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
-          keep_files: true
+          destination_dir: staging
