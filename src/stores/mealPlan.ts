@@ -6,8 +6,15 @@ export interface MealPlanEntry {
   recipeId: string
 }
 
+const STORAGE_KEY = 'mealPlan'
+
+function save(entries: MealPlanEntry[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries))
+}
+
 export const useMealPlanStore = defineStore('mealPlan', () => {
-  const entries = ref<MealPlanEntry[]>([])
+  const stored = localStorage.getItem(STORAGE_KEY)
+  const entries = ref<MealPlanEntry[]>(stored ? JSON.parse(stored) : [])
 
   function assign(date: string, recipeId: string) {
     const index = entries.value.findIndex((e) => e.date === date)
@@ -16,10 +23,12 @@ export const useMealPlanStore = defineStore('mealPlan', () => {
     } else {
       entries.value.push({ date, recipeId })
     }
+    save(entries.value)
   }
 
   function unassign(date: string) {
     entries.value = entries.value.filter((e) => e.date !== date)
+    save(entries.value)
   }
 
   function getForDate(date: string): MealPlanEntry | undefined {

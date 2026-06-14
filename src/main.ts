@@ -20,6 +20,13 @@ const vuetify = createVuetify({
   },
 })
 
+if ('serviceWorker' in navigator) {
+  const hadController = !!navigator.serviceWorker.controller
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hadController) window.location.reload()
+  })
+}
+
 const app = createApp(App)
 
 app.use(createPinia())
