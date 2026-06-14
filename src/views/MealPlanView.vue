@@ -20,11 +20,8 @@ const weekDays = computed(() => {
     date.setDate(startOfWeek.getDate() + i)
     return {
       iso: date.toISOString().slice(0, 10),
-      label: date.toLocaleDateString('en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-      }),
+      weekday: date.toLocaleDateString('en-US', { weekday: 'short' }),
+      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
     }
   })
 })
@@ -49,31 +46,41 @@ function onRecipeChange(date: string, value: string) {
 
 <template>
   <v-container>
-    <h1 class="text-h4 text-primary mb-4">Meal Plan</h1>
+    <h1 class="text-h6 text-primary mb-2">Meal Plan</h1>
 
-    <div class="d-flex align-center justify-space-between mb-4">
-      <v-btn icon="mdi-chevron-left" variant="tonal" @click="weekOffset--" />
-      <span class="text-body-2">{{ weekDays[0].iso }} — {{ weekDays[6].iso }}</span>
-      <v-btn icon="mdi-chevron-right" variant="tonal" @click="weekOffset++" />
+    <div class="d-flex align-center justify-space-between mb-2">
+      <v-btn icon="mdi-chevron-left" variant="tonal" size="small" @click="weekOffset--" />
+      <span class="text-body-2">{{ weekDays[0].date }} – {{ weekDays[6].date }}</span>
+      <v-btn icon="mdi-chevron-right" variant="tonal" size="small" @click="weekOffset++" />
     </div>
 
-    <v-row>
-      <v-col v-for="day in weekDays" :key="day.iso" cols="12" sm="6" md="4">
-        <v-card variant="outlined">
-          <v-card-title class="text-body-1">{{ day.label }}</v-card-title>
-          <v-card-text>
-            <v-select
-              :model-value="getSelectedRecipeId(day.iso)"
-              :items="recipeSelectItems"
-              item-title="title"
-              item-value="value"
-              density="compact"
-              hide-details
-              @update:model-value="(v: string) => onRecipeChange(day.iso, v)"
-            />
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
+    <div class="meal-plan-list">
+      <div v-for="day in weekDays" :key="day.iso" class="meal-plan-row d-flex align-center">
+        <div class="day-label flex-shrink-0 mr-3">
+          <span class="font-weight-bold text-body-2">{{ day.weekday }}</span>
+          <span class="text-caption text-medium-emphasis ml-1">{{ day.date }}</span>
+        </div>
+        <v-select
+          :model-value="getSelectedRecipeId(day.iso)"
+          :items="recipeSelectItems"
+          item-title="title"
+          item-value="value"
+          density="compact"
+          variant="outlined"
+          hide-details
+          class="flex-grow-1"
+          @update:model-value="(v: string) => onRecipeChange(day.iso, v)"
+        />
+      </div>
+    </div>
   </v-container>
 </template>
+
+<style scoped>
+.meal-plan-row + .meal-plan-row {
+  margin-top: 8px;
+}
+.day-label {
+  min-width: 84px;
+}
+</style>
