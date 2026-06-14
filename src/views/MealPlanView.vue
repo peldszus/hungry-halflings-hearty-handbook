@@ -30,7 +30,7 @@ const weekDays = computed(() => {
     return {
       iso: date.toISOString().slice(0, 10),
       weekday: date.toLocaleDateString('en-US', { weekday: 'short' }),
-      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       recipe,
       selectedRecipeId: entry?.recipeId ?? '',
     }
@@ -63,6 +63,7 @@ function onRecipeChange(date: string, value: string) {
       <v-btn icon="mdi-chevron-right" variant="tonal" size="small" @click="weekOffset++" />
       <v-btn
         :icon="editMode ? 'mdi-check' : 'mdi-pencil'"
+        class="ml-2"
         :color="editMode ? 'primary' : undefined"
         variant="tonal"
         size="small"
