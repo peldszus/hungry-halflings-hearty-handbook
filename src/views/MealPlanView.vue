@@ -1,12 +1,19 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
 
+const router = useRouter()
 const recipesStore = useRecipesStore()
 const mealPlanStore = useMealPlanStore()
 
 const weekOffset = ref(0)
+const editMode = ref(false)
+
+watch(weekOffset, () => {
+  editMode.value = false
+})
 
 const weekDays = computed(() => {
   const today = new Date()
@@ -18,10 +25,19 @@ const weekDays = computed(() => {
   return Array.from({ length: 7 }, (_, i) => {
     const date = new Date(startOfWeek)
     date.setDate(startOfWeek.getDate() + i)
+    const entry = mealPlanStore.getForDate(date.toISOString().slice(0, 10))
+    const recipe = entry ? (recipesStore.getById(entry.recipeId) ?? null) : null
     return {
       iso: date.toISOString().slice(0, 10),
       weekday: date.toLocaleDateString('en-US', { weekday: 'short' }),
       date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      dateWithYear: date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      }),
+      recipe,
+      selectedRecipeId: entry?.recipeId ?? '',
     }
   })
 })
@@ -30,10 +46,6 @@ const recipeSelectItems = computed(() => [
   { title: '— No meal —', value: '' },
   ...recipesStore.recipes.map((r) => ({ title: r.name, value: r.id })),
 ])
-
-function getSelectedRecipeId(date: string): string {
-  return mealPlanStore.getForDate(date)?.recipeId ?? ''
-}
 
 function onRecipeChange(date: string, value: string) {
   if (value) {
@@ -48,10 +60,20 @@ function onRecipeChange(date: string, value: string) {
   <v-container>
     <h1 class="text-h6 text-primary mb-2">Meal Plan</h1>
 
-    <div class="d-flex align-center justify-space-between mb-2">
+    <div class="d-flex align-center mb-3 gap-2">
       <v-btn icon="mdi-chevron-left" variant="tonal" size="small" @click="weekOffset--" />
-      <span class="text-body-2">{{ weekDays[0].date }} – {{ weekDays[6].date }}</span>
+      <span class="text-body-2 flex-grow-1 text-center">
+        {{ weekDays[0].dateWithYear }} – {{ weekDays[6].dateWithYear }}
+      </span>
       <v-btn icon="mdi-chevron-right" variant="tonal" size="small" @click="weekOffset++" />
+      <v-btn
+        :icon="editMode ? 'mdi-check' : 'mdi-pencil'"
+        class="ml-2"
+        :color="editMode ? 'primary' : undefined"
+        variant="tonal"
+        size="small"
+        @click="editMode = !editMode"
+      />
     </div>
 
     <div class="meal-plan-list">
@@ -60,8 +82,23 @@ function onRecipeChange(date: string, value: string) {
           <span class="font-weight-bold text-body-2">{{ day.weekday }}</span>
           <span class="text-caption text-medium-emphasis ml-1">{{ day.date }}</span>
         </div>
+
+        <template v-if="!editMode">
+          <v-btn
+            v-if="day.recipe"
+            variant="tonal"
+            density="compact"
+            class="flex-grow-1 meal-btn"
+            @click="router.push({ name: 'recipe-detail', params: { id: day.recipe.id } })"
+          >
+            {{ day.recipe.name }}
+          </v-btn>
+          <span v-else class="text-body-2 text-medium-emphasis flex-grow-1">—</span>
+        </template>
+
         <v-select
-          :model-value="getSelectedRecipeId(day.iso)"
+          v-else
+          :model-value="day.selectedRecipeId"
           :items="recipeSelectItems"
           item-title="title"
           item-value="value"
@@ -80,7 +117,13 @@ function onRecipeChange(date: string, value: string) {
 .meal-plan-row + .meal-plan-row {
   margin-top: 8px;
 }
+.meal-plan-row {
+  min-height: 40px;
+}
 .day-label {
   min-width: 84px;
+}
+.meal-btn {
+  justify-content: flex-start;
 }
 </style>
