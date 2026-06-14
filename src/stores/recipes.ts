@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 export interface Recipe {
   id: string
@@ -8,8 +8,16 @@ export interface Recipe {
   servings: number
 }
 
+const STORAGE_KEY = 'recipes'
+
 export const useRecipesStore = defineStore('recipes', () => {
-  const recipes = ref<Recipe[]>([])
+  const stored = localStorage.getItem(STORAGE_KEY)
+  const recipes = ref<Recipe[]>(stored ? JSON.parse(stored) : [])
+
+  watch(recipes, (val) => localStorage.setItem(STORAGE_KEY, JSON.stringify(val)), {
+    deep: true,
+    flush: 'sync',
+  })
 
   const recipeCount = computed(() => recipes.value.length)
 

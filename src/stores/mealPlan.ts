@@ -1,13 +1,21 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 export interface MealPlanEntry {
   date: string
   recipeId: string
 }
 
+const STORAGE_KEY = 'mealPlan'
+
 export const useMealPlanStore = defineStore('mealPlan', () => {
-  const entries = ref<MealPlanEntry[]>([])
+  const stored = localStorage.getItem(STORAGE_KEY)
+  const entries = ref<MealPlanEntry[]>(stored ? JSON.parse(stored) : [])
+
+  watch(entries, (val) => localStorage.setItem(STORAGE_KEY, JSON.stringify(val)), {
+    deep: true,
+    flush: 'sync',
+  })
 
   function assign(date: string, recipeId: string) {
     const index = entries.value.findIndex((e) => e.date === date)
