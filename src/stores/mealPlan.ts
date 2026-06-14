@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 
 export interface MealPlanEntry {
   date: string
@@ -8,14 +8,13 @@ export interface MealPlanEntry {
 
 const STORAGE_KEY = 'mealPlan'
 
+function save(entries: MealPlanEntry[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries))
+}
+
 export const useMealPlanStore = defineStore('mealPlan', () => {
   const stored = localStorage.getItem(STORAGE_KEY)
   const entries = ref<MealPlanEntry[]>(stored ? JSON.parse(stored) : [])
-
-  watch(entries, (val) => localStorage.setItem(STORAGE_KEY, JSON.stringify(val)), {
-    deep: true,
-    flush: 'sync',
-  })
 
   function assign(date: string, recipeId: string) {
     const index = entries.value.findIndex((e) => e.date === date)
@@ -24,10 +23,12 @@ export const useMealPlanStore = defineStore('mealPlan', () => {
     } else {
       entries.value.push({ date, recipeId })
     }
+    save(entries.value)
   }
 
   function unassign(date: string) {
     entries.value = entries.value.filter((e) => e.date !== date)
+    save(entries.value)
   }
 
   function getForDate(date: string): MealPlanEntry | undefined {
