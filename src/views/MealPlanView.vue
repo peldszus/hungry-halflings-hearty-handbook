@@ -30,7 +30,12 @@ const weekDays = computed(() => {
     return {
       iso: date.toISOString().slice(0, 10),
       weekday: date.toLocaleDateString('en-US', { weekday: 'short' }),
-      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      dateWithYear: date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      }),
       recipe,
       selectedRecipeId: entry?.recipeId ?? '',
     }
@@ -58,7 +63,7 @@ function onRecipeChange(date: string, value: string) {
     <div class="d-flex align-center mb-3 gap-2">
       <v-btn icon="mdi-chevron-left" variant="tonal" size="small" @click="weekOffset--" />
       <span class="text-body-2 flex-grow-1 text-center">
-        {{ weekDays[0].date }} – {{ weekDays[6].date }}
+        {{ weekDays[0].dateWithYear }} – {{ weekDays[6].dateWithYear }}
       </span>
       <v-btn icon="mdi-chevron-right" variant="tonal" size="small" @click="weekOffset++" />
       <v-btn
