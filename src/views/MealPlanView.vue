@@ -55,32 +55,19 @@ function onRecipeChange(date: string, value: string) {
   <v-container>
     <h1 class="text-h6 text-primary mb-2">Meal Plan</h1>
 
-    <div class="d-flex align-center justify-space-between mb-2">
+    <div class="d-flex align-center mb-3 gap-2">
       <v-btn icon="mdi-chevron-left" variant="tonal" size="small" @click="weekOffset--" />
-      <span class="text-body-2">{{ weekDays[0].date }} – {{ weekDays[6].date }}</span>
+      <span class="text-body-2 flex-grow-1 text-center">
+        {{ weekDays[0].date }} – {{ weekDays[6].date }}
+      </span>
       <v-btn icon="mdi-chevron-right" variant="tonal" size="small" @click="weekOffset++" />
-    </div>
-
-    <div class="d-flex justify-end mb-3">
       <v-btn
-        v-if="!editMode"
-        size="small"
+        :icon="editMode ? 'mdi-check' : 'mdi-pencil'"
+        :color="editMode ? 'primary' : undefined"
         variant="tonal"
-        prepend-icon="mdi-pencil"
-        @click="editMode = true"
-      >
-        Edit Week
-      </v-btn>
-      <v-btn
-        v-else
         size="small"
-        variant="tonal"
-        color="primary"
-        prepend-icon="mdi-check"
-        @click="editMode = false"
-      >
-        Done
-      </v-btn>
+        @click="editMode = !editMode"
+      />
     </div>
 
     <div class="meal-plan-list">
@@ -94,7 +81,7 @@ function onRecipeChange(date: string, value: string) {
           <v-btn
             v-if="day.recipe"
             variant="tonal"
-            size="small"
+            density="compact"
             class="flex-grow-1 meal-btn"
             @click="router.push({ name: 'recipe-detail', params: { id: day.recipe.id } })"
           >
@@ -123,6 +110,9 @@ function onRecipeChange(date: string, value: string) {
 <style scoped>
 .meal-plan-row + .meal-plan-row {
   margin-top: 8px;
+}
+.meal-plan-row {
+  min-height: 40px;
 }
 .day-label {
   min-width: 84px;

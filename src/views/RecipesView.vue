@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useRecipesStore } from '@/stores/recipes'
 
+const router = useRouter()
 const store = useRecipesStore()
 
 const newName = ref('')
@@ -55,13 +57,14 @@ function addRecipe() {
           :key="recipe.id"
           :title="recipe.name"
           :subtitle="`${recipe.servings} servings${recipe.ingredients.length ? ' · ' + recipe.ingredients.join(', ') : ''}`"
+          @click="router.push({ name: 'recipe-detail', params: { id: recipe.id } })"
         >
           <template #append>
             <v-btn
               icon="mdi-delete"
               variant="text"
               color="error"
-              @click="store.removeRecipe(recipe.id)"
+              @click.stop="store.removeRecipe(recipe.id)"
             />
           </template>
         </v-list-item>
