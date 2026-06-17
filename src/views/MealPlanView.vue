@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
+import { highlightInfixMatches } from '@/utils/highlight'
 
 const router = useRouter()
 const recipesStore = useRecipesStore()
@@ -10,6 +11,7 @@ const mealPlanStore = useMealPlanStore()
 
 const weekOffset = ref(0)
 const editMode = ref(false)
+const searchText = ref('')
 
 watch(weekOffset, () => {
   editMode.value = false
@@ -37,17 +39,16 @@ const weekDays = computed(() => {
         year: 'numeric',
       }),
       recipe,
-      selectedRecipeId: entry?.recipeId ?? '',
+      selectedRecipeId: entry?.recipeId ?? null,
     }
   })
 })
 
-const recipeSelectItems = computed(() => [
-  { title: '— No meal —', value: '' },
-  ...recipesStore.recipes.map((r) => ({ title: r.name, value: r.id })),
-])
+const recipeSelectItems = computed(() =>
+  recipesStore.recipes.map((r) => ({ title: r.name, value: r.id }))
+)
 
-function onRecipeChange(date: string, value: string) {
+function onRecipeChange(date: string, value: string | null) {
   if (value) {
     mealPlanStore.assign(date, value)
   } else {
@@ -96,18 +97,32 @@ function onRecipeChange(date: string, value: string) {
           <span v-else class="text-body-2 text-medium-emphasis flex-grow-1">—</span>
         </template>
 
-        <v-select
+        <v-autocomplete
           v-else
           :model-value="day.selectedRecipeId"
           :items="recipeSelectItems"
           item-title="title"
           item-value="value"
+          placeholder="— No meal —"
           density="compact"
           variant="outlined"
           hide-details
+          clearable
           class="flex-grow-1"
-          @update:model-value="(v: string) => onRecipeChange(day.iso, v)"
-        />
+          @update:model-value="(v: string | null) => onRecipeChange(day.iso, v)"
+          @update:search="(v: string) => (searchText = v)"
+        >
+          <template #item="{ item, props: itemProps }">
+            <v-list-item v-bind="itemProps" :title="undefined">
+              <span
+                v-for="(seg, i) in highlightInfixMatches(item.title, searchText)"
+                :key="i"
+                :class="{ 'search-match': seg.matched }"
+                >{{ seg.text }}</span
+              >
+            </v-list-item>
+          </template>
+        </v-autocomplete>
       </div>
     </div>
   </v-container>
@@ -125,5 +140,9 @@ function onRecipeChange(date: string, value: string) {
 }
 .meal-btn {
   justify-content: flex-start;
+}
+.search-match {
+  font-weight: 600;
+  background: rgba(var(--v-theme-primary), 0.15);
 }
 </style>
