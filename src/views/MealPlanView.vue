@@ -39,17 +39,16 @@ const weekDays = computed(() => {
         year: 'numeric',
       }),
       recipe,
-      selectedRecipeId: entry?.recipeId ?? '',
+      selectedRecipeId: entry?.recipeId ?? null,
     }
   })
 })
 
-const recipeSelectItems = computed(() => [
-  { title: '— No meal —', value: '' },
-  ...recipesStore.recipes.map((r) => ({ title: r.name, value: r.id })),
-])
+const recipeSelectItems = computed(() =>
+  recipesStore.recipes.map((r) => ({ title: r.name, value: r.id }))
+)
 
-function onRecipeChange(date: string, value: string) {
+function onRecipeChange(date: string, value: string | null) {
   if (value) {
     mealPlanStore.assign(date, value)
   } else {
@@ -104,24 +103,23 @@ function onRecipeChange(date: string, value: string) {
           :items="recipeSelectItems"
           item-title="title"
           item-value="value"
+          placeholder="— No meal —"
           density="compact"
           variant="outlined"
           hide-details
+          clearable
           class="flex-grow-1"
-          @update:model-value="(v: string) => onRecipeChange(day.iso, v)"
+          @update:model-value="(v: string | null) => onRecipeChange(day.iso, v)"
           @update:search="(v: string) => (searchText = v)"
         >
           <template #item="{ item, props: itemProps }">
             <v-list-item v-bind="itemProps" :title="undefined">
-              <template v-if="item.value === ''">— No meal —</template>
-              <template v-else>
-                <span
-                  v-for="(seg, i) in highlightInfixMatches(item.title, searchText)"
-                  :key="i"
-                  :class="{ 'search-match': seg.matched }"
-                  >{{ seg.text }}</span
-                >
-              </template>
+              <span
+                v-for="(seg, i) in highlightInfixMatches(item.title, searchText)"
+                :key="i"
+                :class="{ 'search-match': seg.matched }"
+                >{{ seg.text }}</span
+              >
             </v-list-item>
           </template>
         </v-autocomplete>
