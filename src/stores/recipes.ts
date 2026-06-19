@@ -21,19 +21,24 @@ export const useRecipesStore = defineStore('recipes', () => {
 
   const recipeCount = computed(() => recipes.value.length)
 
+  function editedAtMillis(recipe: Recipe): number {
+    const time = recipe.lastEditedAt ? new Date(recipe.lastEditedAt).getTime() : 0
+    return Number.isNaN(time) ? 0 : time
+  }
+
   const recentRecipes = computed(() =>
-    [...recipes.value].sort(
-      (a, b) => new Date(b.lastEditedAt).getTime() - new Date(a.lastEditedAt).getTime()
-    )
+    [...recipes.value].sort((a, b) => editedAtMillis(b) - editedAtMillis(a))
   )
 
-  function addRecipe(recipe: Omit<Recipe, 'id' | 'lastEditedAt'>) {
-    recipes.value.push({
+  function addRecipe(recipe: Omit<Recipe, 'id' | 'lastEditedAt'>): Recipe {
+    const created: Recipe = {
       ...recipe,
       id: crypto.randomUUID(),
       lastEditedAt: new Date().toISOString(),
-    })
+    }
+    recipes.value.push(created)
     save(recipes.value)
+    return created
   }
 
   function updateRecipe(id: string, updates: Omit<Recipe, 'id' | 'lastEditedAt'>) {

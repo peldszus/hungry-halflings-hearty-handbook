@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import RecipeEditView from './RecipeEditView.vue'
-import { useRecipesStore } from '@/stores/recipes'
+import { useRecipesStore, type Recipe } from '@/stores/recipes'
 
 function makeRouter() {
   return createRouter({
@@ -58,5 +58,30 @@ describe('RecipeEditView', () => {
 
     const wrapper = mount(RecipeEditView, { global: { plugins: [router, pinia] } })
     expect(wrapper.text()).toContain('Recipe not found.')
+  })
+
+  it('navigates to the new recipe detail page after saving in create mode', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    store.recipes.push({
+      id: 'legacy-1',
+      name: 'Legacy',
+      ingredients: [],
+      servings: 1,
+    } as unknown as Recipe)
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-new' })
+    await router.isReady()
+
+    const wrapper = mount(RecipeEditView, { global: { plugins: [router, pinia] } })
+    await wrapper.find('input').setValue('New Recipe')
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    const newRecipe = store.recipes.find((r) => r.name === 'New Recipe')
+    expect(router.currentRoute.value.name).toBe('recipe-detail')
+    expect(router.currentRoute.value.params.id).toBe(newRecipe?.id)
   })
 })

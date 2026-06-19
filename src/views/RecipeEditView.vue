@@ -33,8 +33,7 @@ function save() {
     store.updateRecipe(existingRecipe.value.id, payload)
     router.push({ name: 'recipe-detail', params: { id: existingRecipe.value.id } })
   } else {
-    store.addRecipe(payload)
-    const created = store.recentRecipes[0]
+    const created = store.addRecipe(payload)
     router.push({ name: 'recipe-detail', params: { id: created.id } })
   }
 }

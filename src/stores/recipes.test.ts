@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import { useRecipesStore } from './recipes'
+import { useRecipesStore, type Recipe } from './recipes'
 
 describe('recipes store', () => {
   beforeEach(() => {
@@ -18,6 +18,13 @@ describe('recipes store', () => {
     store.addRecipe({ name: 'Pasta', ingredients: ['pasta', 'sauce'], servings: 2 })
     expect(store.recipeCount).toBe(1)
     expect(store.recipes[0].name).toBe('Pasta')
+  })
+
+  it('returns the created recipe from addRecipe', () => {
+    const store = useRecipesStore()
+    const created = store.addRecipe({ name: 'Pasta', ingredients: ['pasta'], servings: 2 })
+    expect(created.id).toBe(store.recipes[0].id)
+    expect(created.name).toBe('Pasta')
   })
 
   it('sets lastEditedAt when adding a recipe', () => {
@@ -56,6 +63,19 @@ describe('recipes store', () => {
     store.updateRecipe(firstId, { name: 'First', ingredients: [], servings: 1 })
 
     expect(store.recentRecipes.map((r) => r.name)).toEqual(['First', 'Second'])
+  })
+
+  it('sorts recipes with missing lastEditedAt to the bottom', () => {
+    const store = useRecipesStore()
+    store.addRecipe({ name: 'HasDate', ingredients: [], servings: 1 })
+    store.recipes.push({
+      id: 'legacy-1',
+      name: 'Legacy',
+      ingredients: [],
+      servings: 1,
+    } as unknown as Recipe)
+
+    expect(store.recentRecipes.map((r) => r.name)).toEqual(['HasDate', 'Legacy'])
   })
 
   it('removes a recipe', () => {

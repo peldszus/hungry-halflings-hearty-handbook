@@ -23,20 +23,19 @@ function deleteRecipe() {
     </v-btn>
 
     <template v-if="recipe">
-      <div class="d-flex align-center mb-4 gap-2">
-        <h1 class="text-h5 text-primary flex-grow-1">{{ recipe.name }}</h1>
+      <h1 class="text-h5 text-primary mb-2">{{ recipe.name }}</h1>
+      <div class="d-flex gap-2 mb-4">
         <v-btn
+          icon="mdi-pencil"
           variant="tonal"
-          prepend-icon="mdi-pencil"
           @click="router.push({ name: 'recipe-edit', params: { id: recipe.id } })"
-        >
-          Edit
-        </v-btn>
-        <v-btn variant="tonal" color="error" prepend-icon="mdi-delete" @click="deleteRecipe">
-          Delete
-        </v-btn>
+        />
+        <v-btn icon="mdi-delete" variant="tonal" color="error" @click="deleteRecipe" />
       </div>
-      <p class="text-body-2 text-medium-emphasis mb-6">{{ recipe.servings }} servings</p>
+      <p class="text-body-2 text-medium-emphasis mb-6">
+        {{ recipe.servings }} servings · Last edited
+        {{ new Date(recipe.lastEditedAt).toLocaleDateString() }}
+      </p>
 
       <h2 class="text-subtitle-1 font-weight-bold mb-2">Ingredients</h2>
       <v-list v-if="recipe.ingredients.length" lines="one">
