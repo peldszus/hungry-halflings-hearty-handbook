@@ -8,6 +8,12 @@ const router = useRouter()
 const recipesStore = useRecipesStore()
 
 const recipe = computed(() => recipesStore.getById(route.params.id as string))
+
+function deleteRecipe() {
+  if (!recipe.value) return
+  recipesStore.removeRecipe(recipe.value.id)
+  router.push({ name: 'recipes' })
+}
 </script>
 
 <template>
@@ -17,7 +23,19 @@ const recipe = computed(() => recipesStore.getById(route.params.id as string))
     </v-btn>
 
     <template v-if="recipe">
-      <h1 class="text-h5 text-primary mb-1">{{ recipe.name }}</h1>
+      <div class="d-flex align-center mb-4 gap-2">
+        <h1 class="text-h5 text-primary flex-grow-1">{{ recipe.name }}</h1>
+        <v-btn
+          variant="tonal"
+          prepend-icon="mdi-pencil"
+          @click="router.push({ name: 'recipe-edit', params: { id: recipe.id } })"
+        >
+          Edit
+        </v-btn>
+        <v-btn variant="tonal" color="error" prepend-icon="mdi-delete" @click="deleteRecipe">
+          Delete
+        </v-btn>
+      </div>
       <p class="text-body-2 text-medium-emphasis mb-6">{{ recipe.servings }} servings</p>
 
       <h2 class="text-subtitle-1 font-weight-bold mb-2">Ingredients</h2>

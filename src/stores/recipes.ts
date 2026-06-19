@@ -6,6 +6,7 @@ export interface Recipe {
   name: string
   ingredients: string[]
   servings: number
+  lastEditedAt: string
 }
 
 const STORAGE_KEY = 'recipes'
@@ -20,8 +21,25 @@ export const useRecipesStore = defineStore('recipes', () => {
 
   const recipeCount = computed(() => recipes.value.length)
 
-  function addRecipe(recipe: Omit<Recipe, 'id'>) {
-    recipes.value.push({ ...recipe, id: crypto.randomUUID() })
+  const recentRecipes = computed(() =>
+    [...recipes.value].sort(
+      (a, b) => new Date(b.lastEditedAt).getTime() - new Date(a.lastEditedAt).getTime()
+    )
+  )
+
+  function addRecipe(recipe: Omit<Recipe, 'id' | 'lastEditedAt'>) {
+    recipes.value.push({
+      ...recipe,
+      id: crypto.randomUUID(),
+      lastEditedAt: new Date().toISOString(),
+    })
+    save(recipes.value)
+  }
+
+  function updateRecipe(id: string, updates: Omit<Recipe, 'id' | 'lastEditedAt'>) {
+    const recipe = recipes.value.find((r) => r.id === id)
+    if (!recipe) return
+    Object.assign(recipe, updates, { lastEditedAt: new Date().toISOString() })
     save(recipes.value)
   }
 
@@ -34,5 +52,5 @@ export const useRecipesStore = defineStore('recipes', () => {
     return recipes.value.find((r) => r.id === id)
   }
 
-  return { recipes, recipeCount, addRecipe, removeRecipe, getById }
+  return { recipes, recipeCount, recentRecipes, addRecipe, updateRecipe, removeRecipe, getById }
 })

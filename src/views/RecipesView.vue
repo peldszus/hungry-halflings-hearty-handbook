@@ -1,28 +1,25 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRecipesStore } from '@/stores/recipes'
+import { highlightInfixMatches } from '@/utils/highlight'
 
 const router = useRouter()
 const store = useRecipesStore()
 
-const newName = ref('')
-const newIngredients = ref('')
-const newServings = ref('2')
+const searchText = ref('')
 
-function addRecipe() {
-  if (!newName.value.trim()) return
-  store.addRecipe({
-    name: newName.value.trim(),
-    ingredients: newIngredients.value
-      .split(',')
-      .map((i) => i.trim())
-      .filter(Boolean),
-    servings: parseInt(newServings.value, 10) || 1,
-  })
-  newName.value = ''
-  newIngredients.value = ''
-  newServings.value = '2'
+const displayedRecipes = computed(() => {
+  if (!searchText.value.trim()) {
+    return store.recentRecipes
+  }
+  return store.recentRecipes.filter((r) =>
+    r.name.toLowerCase().includes(searchText.value.toLowerCase())
+  )
+})
+
+function recipeSubtitle(recipe: { servings: number; ingredients: string[] }) {
+  return `${recipe.servings} servings${recipe.ingredients.length ? ' · ' + recipe.ingredients.join(', ') : ''}`
 }
 </script>
 
@@ -30,45 +27,65 @@ function addRecipe() {
   <v-container>
     <h1 class="text-h4 text-primary mb-4">Recipes</h1>
 
-    <v-card class="mb-4">
-      <v-card-title>Add Recipe</v-card-title>
-      <v-card-text>
-        <v-form @submit.prevent="addRecipe">
-          <v-text-field v-model="newName" label="Name" placeholder="Recipe name" required />
-          <v-text-field
-            v-model="newIngredients"
-            label="Ingredients"
-            placeholder="Comma-separated ingredients"
-          />
-          <v-text-field v-model="newServings" label="Servings" type="number" min="1" />
-          <v-btn type="submit" color="primary" block>Add Recipe</v-btn>
-        </v-form>
-      </v-card-text>
-    </v-card>
+    <v-text-field
+      v-model="searchText"
+      label="Search recipes"
+      placeholder="Search by name"
+      prepend-inner-icon="mdi-magnify"
+      density="compact"
+      variant="outlined"
+      clearable
+      hide-details
+      class="mb-4"
+    />
 
     <v-card>
-      <v-card-title>Your Recipes ({{ store.recipeCount }})</v-card-title>
-      <v-card-text v-if="store.recipeCount === 0" class="text-medium-emphasis font-italic">
-        No recipes yet. Add your first recipe above.
+      <v-card-title>
+        {{ searchText.trim() ? 'Results' : 'Recently Edited' }} ({{ displayedRecipes.length }})
+      </v-card-title>
+      <v-card-text v-if="displayedRecipes.length === 0" class="text-medium-emphasis font-italic">
+        {{
+          searchText.trim() ? 'No recipes match your search.' : 'No recipes yet. Tap + to add one.'
+        }}
       </v-card-text>
       <v-list v-else>
         <v-list-item
-          v-for="recipe in store.recipes"
+          v-for="recipe in displayedRecipes"
           :key="recipe.id"
-          :title="recipe.name"
-          :subtitle="`${recipe.servings} servings${recipe.ingredients.length ? ' · ' + recipe.ingredients.join(', ') : ''}`"
+          :subtitle="recipeSubtitle(recipe)"
           @click="router.push({ name: 'recipe-detail', params: { id: recipe.id } })"
         >
-          <template #append>
-            <v-btn
-              icon="mdi-delete"
-              variant="text"
-              color="error"
-              @click.stop="store.removeRecipe(recipe.id)"
-            />
+          <template #title>
+            <span
+              v-for="(seg, i) in highlightInfixMatches(recipe.name, searchText)"
+              :key="i"
+              :class="{ 'search-match': seg.matched }"
+              >{{ seg.text }}</span
+            >
           </template>
         </v-list-item>
       </v-list>
     </v-card>
+
+    <v-btn
+      icon="mdi-plus"
+      color="primary"
+      class="fab"
+      size="large"
+      elevation="4"
+      @click="router.push({ name: 'recipe-new' })"
+    />
   </v-container>
 </template>
+
+<style scoped>
+.fab {
+  position: fixed;
+  bottom: 80px;
+  right: 16px;
+}
+.search-match {
+  font-weight: 600;
+  background: rgba(var(--v-theme-primary), 0.15);
+}
+</style>
