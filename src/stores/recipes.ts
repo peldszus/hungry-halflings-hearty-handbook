@@ -6,6 +6,7 @@ export interface Recipe {
   name: string
   ingredients: string[]
   servings: number
+  lastEditedAt: string
 }
 
 const STORAGE_KEY = 'recipes'
@@ -20,8 +21,30 @@ export const useRecipesStore = defineStore('recipes', () => {
 
   const recipeCount = computed(() => recipes.value.length)
 
-  function addRecipe(recipe: Omit<Recipe, 'id'>) {
-    recipes.value.push({ ...recipe, id: crypto.randomUUID() })
+  function editedAtMillis(recipe: Recipe): number {
+    const time = recipe.lastEditedAt ? new Date(recipe.lastEditedAt).getTime() : 0
+    return Number.isNaN(time) ? 0 : time
+  }
+
+  const recentRecipes = computed(() =>
+    [...recipes.value].sort((a, b) => editedAtMillis(b) - editedAtMillis(a))
+  )
+
+  function addRecipe(recipe: Omit<Recipe, 'id' | 'lastEditedAt'>): Recipe {
+    const created: Recipe = {
+      ...recipe,
+      id: crypto.randomUUID(),
+      lastEditedAt: new Date().toISOString(),
+    }
+    recipes.value.push(created)
+    save(recipes.value)
+    return created
+  }
+
+  function updateRecipe(id: string, updates: Omit<Recipe, 'id' | 'lastEditedAt'>) {
+    const recipe = recipes.value.find((r) => r.id === id)
+    if (!recipe) return
+    Object.assign(recipe, updates, { lastEditedAt: new Date().toISOString() })
     save(recipes.value)
   }
 
@@ -34,5 +57,5 @@ export const useRecipesStore = defineStore('recipes', () => {
     return recipes.value.find((r) => r.id === id)
   }
 
-  return { recipes, recipeCount, addRecipe, removeRecipe, getById }
+  return { recipes, recipeCount, recentRecipes, addRecipe, updateRecipe, removeRecipe, getById }
 })
