@@ -33,10 +33,14 @@ function save() {
 
   if (isEditMode.value && existingRecipe.value) {
     store.updateRecipe(existingRecipe.value.id, payload)
-    router.push({ name: 'recipe-detail', params: { id: existingRecipe.value.id } })
+    if (window.history.state?.back) {
+      router.back()
+    } else {
+      router.replace({ name: 'recipe-detail', params: { id: existingRecipe.value.id } })
+    }
   } else {
     const created = store.addRecipe(payload)
-    router.push({ name: 'recipe-detail', params: { id: created.id } })
+    router.replace({ name: 'recipe-detail', params: { id: created.id } })
   }
 }
 </script>
