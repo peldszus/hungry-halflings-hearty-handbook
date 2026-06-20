@@ -32,11 +32,11 @@ function toggleArchive() {
     </v-btn>
 
     <template v-if="recipe">
-      <div class="d-flex align-center gap-2 mb-2">
+      <div class="d-flex align-center ga-2 mb-2">
         <h1 class="text-h5 text-primary">{{ recipe.name }}</h1>
         <v-chip v-if="recipe.archived" size="small" variant="tonal">Archived</v-chip>
       </div>
-      <div class="d-flex gap-2 mb-4">
+      <div class="d-flex ga-2 mb-4">
         <v-btn
           icon="mdi-pencil"
           variant="tonal"
@@ -45,6 +45,7 @@ function toggleArchive() {
         <v-btn
           :icon="recipe.archived ? 'mdi-archive-arrow-up' : 'mdi-archive-arrow-down'"
           variant="tonal"
+          :color="recipe.archived ? 'primary' : undefined"
           @click="toggleArchive"
         />
         <v-btn icon="mdi-delete" variant="tonal" color="error" @click="deleteRecipe" />
