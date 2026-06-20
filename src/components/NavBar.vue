@@ -8,7 +8,7 @@ const currentPath = computed(() => route.path)
 
 <template>
   <v-app-bar :elevation="2" color="primary">
-    <v-app-bar-title>Hungry Halflings</v-app-bar-title>
+    <v-app-bar-title>Hungry Halflings Hearty Handbook</v-app-bar-title>
   </v-app-bar>
 
   <v-bottom-navigation :model-value="currentPath" grow color="primary">
