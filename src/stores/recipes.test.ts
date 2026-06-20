@@ -86,6 +86,41 @@ describe('recipes store', () => {
     expect(store.recipeCount).toBe(0)
   })
 
+  it('defaults archived to false when adding a recipe', () => {
+    const store = useRecipesStore()
+    store.addRecipe({ name: 'Pasta', ingredients: [], servings: 2 })
+    expect(store.recipes[0].archived).toBe(false)
+  })
+
+  it('archives and unarchives a recipe without changing lastEditedAt', () => {
+    const store = useRecipesStore()
+    store.addRecipe({ name: 'Pasta', ingredients: [], servings: 2 })
+    const id = store.recipes[0].id
+    const originalEditedAt = store.recipes[0].lastEditedAt
+
+    store.archiveRecipe(id)
+    expect(store.getById(id)?.archived).toBe(true)
+    expect(store.getById(id)?.lastEditedAt).toBe(originalEditedAt)
+
+    store.unarchiveRecipe(id)
+    expect(store.getById(id)?.archived).toBe(false)
+    expect(store.getById(id)?.lastEditedAt).toBe(originalEditedAt)
+  })
+
+  it('round-trips the optional url field', () => {
+    const store = useRecipesStore()
+    const created = store.addRecipe({
+      name: 'Pasta',
+      ingredients: [],
+      servings: 2,
+      url: 'https://example.com/pasta',
+    })
+    expect(store.getById(created.id)?.url).toBe('https://example.com/pasta')
+
+    store.updateRecipe(created.id, { name: 'Pasta', ingredients: [], servings: 2, url: undefined })
+    expect(store.getById(created.id)?.url).toBeUndefined()
+  })
+
   it('persists recipes to localStorage', () => {
     const store = useRecipesStore()
     store.addRecipe({ name: 'Soup', ingredients: ['water'], servings: 1 })
