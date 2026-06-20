@@ -14,6 +14,15 @@ function deleteRecipe() {
   recipesStore.removeRecipe(recipe.value.id)
   router.push({ name: 'recipes' })
 }
+
+function toggleArchive() {
+  if (!recipe.value) return
+  if (recipe.value.archived) {
+    recipesStore.unarchiveRecipe(recipe.value.id)
+  } else {
+    recipesStore.archiveRecipe(recipe.value.id)
+  }
+}
 </script>
 
 <template>
@@ -23,18 +32,30 @@ function deleteRecipe() {
     </v-btn>
 
     <template v-if="recipe">
-      <h1 class="text-h5 text-primary mb-2">{{ recipe.name }}</h1>
-      <div class="d-flex gap-2 mb-4">
+      <div class="d-flex align-center ga-2 mb-2">
+        <h1 class="text-h5 text-primary">{{ recipe.name }}</h1>
+        <v-chip v-if="recipe.archived" size="small" variant="tonal">Archived</v-chip>
+      </div>
+      <div class="d-flex ga-2 mb-4">
         <v-btn
           icon="mdi-pencil"
           variant="tonal"
           @click="router.push({ name: 'recipe-edit', params: { id: recipe.id } })"
         />
+        <v-btn
+          :icon="recipe.archived ? 'mdi-archive-arrow-up' : 'mdi-archive-arrow-down'"
+          variant="tonal"
+          :color="recipe.archived ? 'primary' : undefined"
+          @click="toggleArchive"
+        />
         <v-btn icon="mdi-delete" variant="tonal" color="error" @click="deleteRecipe" />
       </div>
-      <p class="text-body-2 text-medium-emphasis mb-6">
+      <p class="text-body-2 text-medium-emphasis mb-2">
         {{ recipe.servings }} servings · Last edited
         {{ new Date(recipe.lastEditedAt).toLocaleDateString() }}
+      </p>
+      <p v-if="recipe.url" class="mb-6">
+        <a :href="recipe.url" target="_blank" rel="noopener noreferrer">{{ recipe.url }}</a>
       </p>
 
       <h2 class="text-subtitle-1 font-weight-bold mb-2">Ingredients</h2>

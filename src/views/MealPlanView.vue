@@ -45,7 +45,7 @@ const weekDays = computed(() => {
 })
 
 const recipeSelectItems = computed(() =>
-  recipesStore.recipes.map((r) => ({ title: r.name, value: r.id }))
+  recipesStore.recipes.filter((r) => !r.archived).map((r) => ({ title: r.name, value: r.id }))
 )
 
 function onRecipeChange(date: string, value: string | null) {

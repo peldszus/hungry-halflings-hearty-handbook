@@ -17,6 +17,7 @@ const notFound = computed(() => isEditMode.value && !existingRecipe.value)
 const name = ref(existingRecipe.value?.name ?? '')
 const ingredients = ref(existingRecipe.value?.ingredients.join(', ') ?? '')
 const servings = ref(String(existingRecipe.value?.servings ?? 2))
+const url = ref(existingRecipe.value?.url ?? '')
 
 function save() {
   if (!name.value.trim()) return
@@ -27,6 +28,7 @@ function save() {
       .map((i) => i.trim())
       .filter(Boolean),
     servings: parseInt(servings.value, 10) || 1,
+    url: url.value.trim() || undefined,
   }
 
   if (isEditMode.value && existingRecipe.value) {
@@ -58,6 +60,12 @@ function save() {
           placeholder="Comma-separated ingredients"
         />
         <v-text-field v-model="servings" label="Servings" type="number" min="1" />
+        <v-text-field
+          v-model="url"
+          label="Recipe URL (optional)"
+          placeholder="https://..."
+          type="url"
+        />
         <v-btn type="submit" color="primary" block>Save</v-btn>
       </v-form>
     </template>

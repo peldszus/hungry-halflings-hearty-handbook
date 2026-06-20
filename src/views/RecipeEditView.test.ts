@@ -84,4 +84,42 @@ describe('RecipeEditView', () => {
     expect(router.currentRoute.value.name).toBe('recipe-detail')
     expect(router.currentRoute.value.params.id).toBe(newRecipe?.id)
   })
+
+  it('saves the optional url field when provided', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-new' })
+    await router.isReady()
+
+    const wrapper = mount(RecipeEditView, { global: { plugins: [router, pinia] } })
+    const inputs = wrapper.findAll('input')
+    await inputs[0].setValue('Linked Recipe')
+    await inputs[3].setValue('https://example.com/recipe')
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    const newRecipe = store.recipes.find((r) => r.name === 'Linked Recipe')
+    expect(newRecipe?.url).toBe('https://example.com/recipe')
+  })
+
+  it('leaves url undefined when left blank', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-new' })
+    await router.isReady()
+
+    const wrapper = mount(RecipeEditView, { global: { plugins: [router, pinia] } })
+    await wrapper.find('input').setValue('No Link Recipe')
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    const newRecipe = store.recipes.find((r) => r.name === 'No Link Recipe')
+    expect(newRecipe?.url).toBeUndefined()
+  })
 })
