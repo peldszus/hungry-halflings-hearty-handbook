@@ -51,4 +51,44 @@ describe('mealPlan store', () => {
     expect(store2.entries).toHaveLength(1)
     expect(store2.getForDate('2026-06-14')?.recipeId).toBe('recipe-1')
   })
+
+  describe('getForRange', () => {
+    it('returns entries within a single-day range (start === end)', () => {
+      const store = useMealPlanStore()
+      store.assign('2026-06-14', 'recipe-1')
+      store.assign('2026-06-15', 'recipe-2')
+
+      expect(store.getForRange('2026-06-14', '2026-06-14')).toEqual([
+        { date: '2026-06-14', recipeId: 'recipe-1' },
+      ])
+    })
+
+    it('includes entries on both boundary dates', () => {
+      const store = useMealPlanStore()
+      store.assign('2026-06-14', 'recipe-1')
+      store.assign('2026-06-16', 'recipe-2')
+      store.assign('2026-06-20', 'recipe-3')
+
+      const result = store.getForRange('2026-06-14', '2026-06-16')
+      expect(result.map((e) => e.date)).toEqual(['2026-06-14', '2026-06-16'])
+    })
+
+    it('excludes entries outside the range', () => {
+      const store = useMealPlanStore()
+      store.assign('2026-06-10', 'recipe-1')
+      store.assign('2026-06-25', 'recipe-2')
+
+      expect(store.getForRange('2026-06-14', '2026-06-16')).toEqual([])
+    })
+
+    it('spans a month boundary correctly', () => {
+      const store = useMealPlanStore()
+      store.assign('2026-05-30', 'recipe-1')
+      store.assign('2026-06-01', 'recipe-2')
+      store.assign('2026-06-10', 'recipe-3')
+
+      const result = store.getForRange('2026-05-30', '2026-06-01')
+      expect(result.map((e) => e.date)).toEqual(['2026-05-30', '2026-06-01'])
+    })
+  })
 })
