@@ -113,6 +113,14 @@ describe('mealPlan store', () => {
 
       expect(store.getLastUsedDate('recipe-1', '2026-06-14')).toBeUndefined()
     })
+
+    it('excludes the given date even if it is the most recent assignment', () => {
+      const store = useMealPlanStore()
+      store.assign('2026-06-10', 'recipe-1')
+      store.assign('2026-06-14', 'recipe-1')
+
+      expect(store.getLastUsedDate('recipe-1', '2026-06-14', '2026-06-14')).toBe('2026-06-10')
+    })
   })
 
   describe('getNextPlannedDate', () => {

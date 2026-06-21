@@ -41,10 +41,11 @@ export const useMealPlanStore = defineStore('mealPlan', () => {
 
   function getLastUsedDate(
     recipeId: string,
-    today: string = new Date().toISOString().slice(0, 10)
+    today: string = new Date().toISOString().slice(0, 10),
+    excludeDate?: string
   ): string | undefined {
     const dates = entries.value
-      .filter((e) => e.recipeId === recipeId && e.date <= today)
+      .filter((e) => e.recipeId === recipeId && e.date <= today && e.date !== excludeDate)
       .map((e) => e.date)
     return dates.length ? dates.sort().at(-1) : undefined
   }

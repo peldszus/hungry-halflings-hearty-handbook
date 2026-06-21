@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
 import { highlightInfixMatches } from '@/utils/highlight'
-import { formatLastUsedLabel } from '@/utils/relativeTime'
+import { formatAssignmentUsageLines } from '@/utils/relativeTime'
 
 const router = useRouter()
 const recipesStore = useRecipesStore()
@@ -51,10 +51,11 @@ const recipeSelectItems = computed(() =>
     .map((r) => ({ title: r.name, value: r.id, favourite: r.favourite }))
 )
 
-function lastUsedLabel(recipeId: string) {
-  return formatLastUsedLabel(
-    mealPlanStore.getLastUsedDate(recipeId),
-    mealPlanStore.getNextPlannedDate(recipeId)
+function usageLines(recipeId: string, referenceDate: string) {
+  return formatAssignmentUsageLines(
+    mealPlanStore.getLastUsedDate(recipeId, referenceDate, referenceDate),
+    mealPlanStore.getNextPlannedDate(recipeId, referenceDate),
+    referenceDate
   )
 }
 
@@ -124,20 +125,30 @@ function onRecipeChange(date: string, value: string | null) {
         >
           <template #item="{ item, props: itemProps }">
             <v-list-item v-bind="itemProps" :title="undefined">
-              <span
-                v-for="(seg, i) in highlightInfixMatches(item.title, searchText)"
-                :key="i"
-                :class="{ 'search-match': seg.matched }"
-                >{{ seg.text }}</span
-              >
-              <v-icon
-                v-if="item.favourite"
-                icon="mdi-star"
-                color="yellow-darken-2"
-                size="small"
-                class="ml-2"
-              />
-              <span class="last-used text-disabled ml-2">{{ lastUsedLabel(item.value) }}</span>
+              <template #title>
+                <span
+                  v-for="(seg, i) in highlightInfixMatches(item.title, searchText)"
+                  :key="i"
+                  :class="{ 'search-match': seg.matched }"
+                  >{{ seg.text }}</span
+                >
+                <v-icon
+                  v-if="item.favourite"
+                  icon="mdi-star"
+                  color="yellow-darken-2"
+                  size="small"
+                  class="ml-2"
+                />
+              </template>
+              <template #subtitle>
+                <div
+                  v-for="(line, i) in usageLines(item.value, day.iso)"
+                  :key="i"
+                  class="last-used text-disabled"
+                >
+                  {{ line }}
+                </div>
+              </template>
             </v-list-item>
           </template>
         </v-autocomplete>
