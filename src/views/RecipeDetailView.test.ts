@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import RecipeDetailView from './RecipeDetailView.vue'
@@ -54,5 +54,133 @@ describe('RecipeDetailView favourite button', () => {
 
     expect(store.getById(id)?.favourite).toBe(false)
     expect(store.getById(id)?.lastEditedAt).toBe(originalEditedAt)
+  })
+})
+
+function iconButton(wrapper: ReturnType<typeof mount>, iconClass: string) {
+  return wrapper.find(`i.${iconClass}`).element.closest('button')
+}
+
+describe('RecipeDetailView actions', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    setActivePinia(createPinia())
+  })
+
+  it('deletes the recipe and navigates back to the recipe list', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    store.addRecipe({ name: 'Pasta', ingredients: ['pasta'], servings: 2 })
+    const id = store.recipes[0].id
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-detail', params: { id } })
+    await router.isReady()
+
+    const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
+    iconButton(wrapper, 'mdi-delete')?.dispatchEvent(new Event('click'))
+    await flushPromises()
+
+    expect(store.getById(id)).toBeUndefined()
+    expect(router.currentRoute.value.name).toBe('recipes')
+  })
+
+  it('archives and unarchives the recipe', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    store.addRecipe({ name: 'Pasta', ingredients: ['pasta'], servings: 2 })
+    const id = store.recipes[0].id
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-detail', params: { id } })
+    await router.isReady()
+
+    const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
+
+    expect(wrapper.find('i.mdi-archive-arrow-down').exists()).toBe(true)
+    iconButton(wrapper, 'mdi-archive-arrow-down')?.dispatchEvent(new Event('click'))
+    await wrapper.vm.$nextTick()
+
+    expect(store.getById(id)?.archived).toBe(true)
+    expect(wrapper.text()).toContain('Archived')
+    expect(wrapper.find('i.mdi-archive-arrow-up').exists()).toBe(true)
+
+    iconButton(wrapper, 'mdi-archive-arrow-up')?.dispatchEvent(new Event('click'))
+    await wrapper.vm.$nextTick()
+
+    expect(store.getById(id)?.archived).toBe(false)
+    expect(wrapper.find('i.mdi-archive-arrow-down').exists()).toBe(true)
+  })
+
+  it('renders an empty-ingredients message when there are none', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    store.addRecipe({ name: 'Toast', ingredients: [], servings: 1 })
+    const id = store.recipes[0].id
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-detail', params: { id } })
+    await router.isReady()
+
+    const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
+
+    expect(wrapper.text()).toContain('No ingredients listed.')
+  })
+
+  it('renders the ingredients list when present', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    store.addRecipe({ name: 'Salad', ingredients: ['lettuce', 'tomato'], servings: 1 })
+    const id = store.recipes[0].id
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-detail', params: { id } })
+    await router.isReady()
+
+    const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
+
+    expect(wrapper.text()).toContain('lettuce')
+    expect(wrapper.text()).toContain('tomato')
+  })
+
+  it('renders the recipe URL as a link when provided', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    store.addRecipe({
+      name: 'Pasta',
+      ingredients: ['pasta'],
+      servings: 2,
+      url: 'https://example.com/pasta',
+    })
+    const id = store.recipes[0].id
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-detail', params: { id } })
+    await router.isReady()
+
+    const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
+
+    const link = wrapper.find('a')
+    expect(link.exists()).toBe(true)
+    expect(link.attributes('href')).toBe('https://example.com/pasta')
+    expect(link.attributes('target')).toBe('_blank')
+  })
+
+  it('shows a not-found message for a missing recipe', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-detail', params: { id: 'does-not-exist' } })
+    await router.isReady()
+
+    const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
+
+    expect(wrapper.text()).toContain('Recipe not found.')
   })
 })
