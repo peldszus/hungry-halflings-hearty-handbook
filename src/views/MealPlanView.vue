@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
 import { highlightInfixMatches } from '@/utils/highlight'
+import { formatRelativeTime } from '@/utils/relativeTime'
 
 const router = useRouter()
 const recipesStore = useRecipesStore()
@@ -49,6 +50,11 @@ const recipeSelectItems = computed(() =>
     .filter((r) => !r.archived)
     .map((r) => ({ title: r.name, value: r.id, favourite: r.favourite }))
 )
+
+function lastUsedLabel(recipeId: string) {
+  const lastUsedDate = mealPlanStore.getLastUsedDate(recipeId)
+  return lastUsedDate ? `Used ${formatRelativeTime(lastUsedDate)}` : 'Never used'
+}
 
 function onRecipeChange(date: string, value: string | null) {
   if (value) {
@@ -129,6 +135,7 @@ function onRecipeChange(date: string, value: string | null) {
                 size="small"
                 class="ml-2"
               />
+              <span class="text-caption text-disabled ml-2">{{ lastUsedLabel(item.value) }}</span>
             </v-list-item>
           </template>
         </v-autocomplete>

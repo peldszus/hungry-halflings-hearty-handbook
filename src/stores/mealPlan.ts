@@ -39,5 +39,10 @@ export const useMealPlanStore = defineStore('mealPlan', () => {
     return entries.value.filter((e) => e.date >= startDate && e.date <= endDate)
   }
 
-  return { entries, assign, unassign, getForDate, getForRange }
+  function getLastUsedDate(recipeId: string): string | undefined {
+    const dates = entries.value.filter((e) => e.recipeId === recipeId).map((e) => e.date)
+    return dates.length ? dates.sort().at(-1) : undefined
+  }
+
+  return { entries, assign, unassign, getForDate, getForRange, getLastUsedDate }
 })

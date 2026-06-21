@@ -2,10 +2,13 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRecipesStore } from '@/stores/recipes'
+import { useMealPlanStore } from '@/stores/mealPlan'
 import { highlightInfixMatches } from '@/utils/highlight'
+import { formatRelativeTime } from '@/utils/relativeTime'
 
 const router = useRouter()
 const store = useRecipesStore()
+const mealPlanStore = useMealPlanStore()
 
 const searchText = ref('')
 
@@ -20,6 +23,11 @@ const displayedRecipes = computed(() => {
 
 function recipeSubtitle(recipe: { servings: number; ingredients: string[] }) {
   return `${recipe.servings} servings${recipe.ingredients.length ? ' · ' + recipe.ingredients.join(', ') : ''}`
+}
+
+function lastUsedLabel(recipeId: string) {
+  const lastUsedDate = mealPlanStore.getLastUsedDate(recipeId)
+  return lastUsedDate ? `Used ${formatRelativeTime(lastUsedDate)}` : 'Never used'
 }
 </script>
 
@@ -52,7 +60,6 @@ function recipeSubtitle(recipe: { servings: number; ingredients: string[] }) {
         <v-list-item
           v-for="recipe in displayedRecipes"
           :key="recipe.id"
-          :subtitle="recipeSubtitle(recipe)"
           @click="router.push({ name: 'recipe-detail', params: { id: recipe.id } })"
         >
           <template #title>
@@ -72,6 +79,10 @@ function recipeSubtitle(recipe: { servings: number; ingredients: string[] }) {
             <v-chip v-if="recipe.archived" size="x-small" variant="tonal" class="ml-2"
               >Archived</v-chip
             >
+          </template>
+          <template #subtitle>
+            <div>{{ recipeSubtitle(recipe) }}</div>
+            <div class="text-caption text-disabled">{{ lastUsedLabel(recipe.id) }}</div>
           </template>
         </v-list-item>
       </v-list>
