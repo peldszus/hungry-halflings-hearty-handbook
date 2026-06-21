@@ -132,4 +132,26 @@ describe('RecipesView search filtering', () => {
     expect(salad?.text()).toContain('ago')
     expect(toast?.text()).toContain('Never used')
   })
+
+  it('shows both the last-used and the next-planned date when both exist', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    const mealPlanStore = useMealPlanStore()
+    store.addRecipe({ name: 'Salad', ingredients: [], servings: 3 })
+    mealPlanStore.assign('2020-01-01', store.recipes[0].id)
+    const futureDate = new Date()
+    futureDate.setDate(futureDate.getDate() + 5)
+    mealPlanStore.assign(futureDate.toISOString().slice(0, 10), store.recipes[0].id)
+
+    const router = makeRouter()
+    router.push({ name: 'recipes' })
+    await router.isReady()
+
+    const wrapper = mount(RecipesView, { global: { plugins: [router, pinia] } })
+
+    const salad = wrapper.findAll('.v-list-item').find((item) => item.text().includes('Salad'))
+    expect(salad?.text()).toContain('Used')
+    expect(salad?.text()).toContain('Planned for')
+  })
 })

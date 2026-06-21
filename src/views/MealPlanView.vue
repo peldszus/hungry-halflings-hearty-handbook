@@ -52,7 +52,10 @@ const recipeSelectItems = computed(() =>
 )
 
 function lastUsedLabel(recipeId: string) {
-  return formatLastUsedLabel(mealPlanStore.getLastUsedDate(recipeId))
+  return formatLastUsedLabel(
+    mealPlanStore.getLastUsedDate(recipeId),
+    mealPlanStore.getNextPlannedDate(recipeId)
+  )
 }
 
 function onRecipeChange(date: string, value: string | null) {

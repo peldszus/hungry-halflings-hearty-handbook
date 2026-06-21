@@ -91,4 +91,45 @@ describe('mealPlan store', () => {
       expect(result.map((e) => e.date)).toEqual(['2026-05-30', '2026-06-01'])
     })
   })
+
+  describe('getLastUsedDate', () => {
+    it('returns undefined when the recipe has never been assigned', () => {
+      const store = useMealPlanStore()
+      expect(store.getLastUsedDate('recipe-1', '2026-06-14')).toBeUndefined()
+    })
+
+    it('returns the most recent date on or before today', () => {
+      const store = useMealPlanStore()
+      store.assign('2026-06-01', 'recipe-1')
+      store.assign('2026-06-10', 'recipe-1')
+      store.assign('2026-06-20', 'recipe-1')
+
+      expect(store.getLastUsedDate('recipe-1', '2026-06-14')).toBe('2026-06-10')
+    })
+
+    it('ignores assignments for other recipes', () => {
+      const store = useMealPlanStore()
+      store.assign('2026-06-10', 'recipe-2')
+
+      expect(store.getLastUsedDate('recipe-1', '2026-06-14')).toBeUndefined()
+    })
+  })
+
+  describe('getNextPlannedDate', () => {
+    it('returns undefined when the recipe has no future assignment', () => {
+      const store = useMealPlanStore()
+      store.assign('2026-06-10', 'recipe-1')
+
+      expect(store.getNextPlannedDate('recipe-1', '2026-06-14')).toBeUndefined()
+    })
+
+    it('returns the earliest date after today', () => {
+      const store = useMealPlanStore()
+      store.assign('2026-06-20', 'recipe-1')
+      store.assign('2026-06-16', 'recipe-1')
+      store.assign('2026-06-10', 'recipe-1')
+
+      expect(store.getNextPlannedDate('recipe-1', '2026-06-14')).toBe('2026-06-16')
+    })
+  })
 })
