@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
 import { highlightInfixMatches } from '@/utils/highlight'
+import { formatAssignmentUsageLines } from '@/utils/relativeTime'
 
 const router = useRouter()
 const recipesStore = useRecipesStore()
@@ -49,6 +50,14 @@ const recipeSelectItems = computed(() =>
     .filter((r) => !r.archived)
     .map((r) => ({ title: r.name, value: r.id, favourite: r.favourite }))
 )
+
+function usageLines(recipeId: string, referenceDate: string) {
+  return formatAssignmentUsageLines(
+    mealPlanStore.getLastUsedDate(recipeId, referenceDate, referenceDate),
+    mealPlanStore.getNextPlannedDate(recipeId, referenceDate),
+    referenceDate
+  )
+}
 
 function onRecipeChange(date: string, value: string | null) {
   if (value) {
@@ -116,19 +125,30 @@ function onRecipeChange(date: string, value: string | null) {
         >
           <template #item="{ item, props: itemProps }">
             <v-list-item v-bind="itemProps" :title="undefined">
-              <span
-                v-for="(seg, i) in highlightInfixMatches(item.title, searchText)"
-                :key="i"
-                :class="{ 'search-match': seg.matched }"
-                >{{ seg.text }}</span
-              >
-              <v-icon
-                v-if="item.favourite"
-                icon="mdi-star"
-                color="yellow-darken-2"
-                size="small"
-                class="ml-2"
-              />
+              <template #title>
+                <span
+                  v-for="(seg, i) in highlightInfixMatches(item.title, searchText)"
+                  :key="i"
+                  :class="{ 'search-match': seg.matched }"
+                  >{{ seg.text }}</span
+                >
+                <v-icon
+                  v-if="item.favourite"
+                  icon="mdi-star"
+                  color="yellow-darken-2"
+                  size="small"
+                  class="ml-2"
+                />
+              </template>
+              <template #subtitle>
+                <div
+                  v-for="(line, i) in usageLines(item.value, day.iso)"
+                  :key="i"
+                  class="last-used text-disabled"
+                >
+                  {{ line }}
+                </div>
+              </template>
             </v-list-item>
           </template>
         </v-autocomplete>
@@ -153,5 +173,8 @@ function onRecipeChange(date: string, value: string | null) {
 .search-match {
   font-weight: 600;
   background: rgba(var(--v-theme-primary), 0.15);
+}
+.last-used {
+  font-size: 0.6875rem;
 }
 </style>

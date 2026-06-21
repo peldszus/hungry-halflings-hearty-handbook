@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import RecipesView from './RecipesView.vue'
 import { useRecipesStore } from '@/stores/recipes'
+import { useMealPlanStore } from '@/stores/mealPlan'
 
 function makeRouter() {
   return createRouter({
@@ -109,12 +110,14 @@ describe('RecipesView search filtering', () => {
     expect(wrapper.text()).toContain('No recipes yet. Tap + to add one.')
   })
 
-  it('formats the subtitle with servings and ingredients', async () => {
+  it('shows the last-used relative time as the subtitle', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useRecipesStore()
+    const mealPlanStore = useMealPlanStore()
     store.addRecipe({ name: 'Salad', ingredients: ['lettuce', 'tomato'], servings: 3 })
     store.addRecipe({ name: 'Toast', ingredients: [], servings: 1 })
+    mealPlanStore.assign('2020-01-01', store.recipes[0].id)
 
     const router = makeRouter()
     router.push({ name: 'recipes' })
@@ -125,8 +128,30 @@ describe('RecipesView search filtering', () => {
     const items = wrapper.findAll('.v-list-item')
     const salad = items.find((item) => item.text().includes('Salad'))
     const toast = items.find((item) => item.text().includes('Toast'))
-    expect(salad?.text()).toContain('3 servings')
-    expect(salad?.text()).toContain('lettuce, tomato')
-    expect(toast?.text()).toContain('1 servings')
+    expect(salad?.text()).toContain('Last used')
+    expect(salad?.text()).toContain('ago')
+    expect(toast?.text()).toContain('Never used')
+  })
+
+  it('shows both the last-used and the next-planned date when both exist', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    const mealPlanStore = useMealPlanStore()
+    store.addRecipe({ name: 'Salad', ingredients: [], servings: 3 })
+    mealPlanStore.assign('2020-01-01', store.recipes[0].id)
+    const futureDate = new Date()
+    futureDate.setDate(futureDate.getDate() + 5)
+    mealPlanStore.assign(futureDate.toISOString().slice(0, 10), store.recipes[0].id)
+
+    const router = makeRouter()
+    router.push({ name: 'recipes' })
+    await router.isReady()
+
+    const wrapper = mount(RecipesView, { global: { plugins: [router, pinia] } })
+
+    const salad = wrapper.findAll('.v-list-item').find((item) => item.text().includes('Salad'))
+    expect(salad?.text()).toContain('Last used')
+    expect(salad?.text()).toContain('Next planned for')
   })
 })
