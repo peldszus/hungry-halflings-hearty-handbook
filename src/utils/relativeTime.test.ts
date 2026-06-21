@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatRelativeTime } from './relativeTime'
+import { formatRelativeTime, formatLastUsedLabel } from './relativeTime'
 
 const now = new Date(2026, 5, 21) // 2026-06-21
 
@@ -46,5 +46,25 @@ describe('formatRelativeTime', () => {
 
   it('returns in N years for future dates a year or more away', () => {
     expect(formatRelativeTime('2028-06-21', now)).toBe('in 2 years')
+  })
+})
+
+describe('formatLastUsedLabel', () => {
+  it('returns "Never used" when there is no date', () => {
+    expect(formatLastUsedLabel(undefined, now)).toBe('Never used')
+  })
+
+  it('returns a "Used" label for today', () => {
+    expect(formatLastUsedLabel('2026-06-21', now)).toBe('Used today')
+  })
+
+  it('returns a "Used" label for past dates', () => {
+    expect(formatLastUsedLabel('2026-06-20', now)).toBe('Used yesterday')
+    expect(formatLastUsedLabel('2026-06-17', now)).toBe('Used 4 days ago')
+  })
+
+  it('returns a "Planned for" label for future dates', () => {
+    expect(formatLastUsedLabel('2026-06-22', now)).toBe('Planned for tomorrow')
+    expect(formatLastUsedLabel('2026-06-25', now)).toBe('Planned for in 4 days')
   })
 })

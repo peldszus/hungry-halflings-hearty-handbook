@@ -2,6 +2,13 @@ function startOfDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate())
 }
 
+function toLocalIsoDate(date: Date): string {
+  const d = startOfDay(date)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+    d.getDate()
+  ).padStart(2, '0')}`
+}
+
 export function formatRelativeTime(isoDate: string, now: Date = new Date()): string {
   const date = new Date(`${isoDate}T00:00:00`)
   const days = Math.round(
@@ -29,4 +36,11 @@ export function formatRelativeTime(isoDate: string, now: Date = new Date()): str
   return past
     ? `${years} year${years > 1 ? 's' : ''} ago`
     : `in ${years} year${years > 1 ? 's' : ''}`
+}
+
+export function formatLastUsedLabel(isoDate: string | undefined, now: Date = new Date()): string {
+  if (!isoDate) return 'Never used'
+  const isFuture = isoDate > toLocalIsoDate(now)
+  const relative = formatRelativeTime(isoDate, now)
+  return isFuture ? `Planned for ${relative}` : `Used ${relative}`
 }

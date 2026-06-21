@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
 import { highlightInfixMatches } from '@/utils/highlight'
-import { formatRelativeTime } from '@/utils/relativeTime'
+import { formatLastUsedLabel } from '@/utils/relativeTime'
 
 const router = useRouter()
 const store = useRecipesStore()
@@ -22,8 +22,7 @@ const displayedRecipes = computed(() => {
 })
 
 function lastUsedLabel(recipeId: string) {
-  const lastUsedDate = mealPlanStore.getLastUsedDate(recipeId)
-  return lastUsedDate ? `Used ${formatRelativeTime(lastUsedDate)}` : 'Never used'
+  return formatLastUsedLabel(mealPlanStore.getLastUsedDate(recipeId))
 }
 </script>
 
