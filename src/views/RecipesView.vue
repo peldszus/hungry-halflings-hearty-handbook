@@ -62,6 +62,13 @@ function recipeSubtitle(recipe: { servings: number; ingredients: string[] }) {
               :class="{ 'search-match': seg.matched }"
               >{{ seg.text }}</span
             >
+            <v-icon
+              v-if="recipe.favourite"
+              icon="mdi-star"
+              color="yellow-darken-2"
+              size="small"
+              class="ml-2"
+            />
             <v-chip v-if="recipe.archived" size="x-small" variant="tonal" class="ml-2"
               >Archived</v-chip
             >
