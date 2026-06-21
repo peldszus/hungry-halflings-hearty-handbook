@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import RecipeDetailView from './RecipeDetailView.vue'
 import { useRecipesStore } from '@/stores/recipes'
+import { useMealPlanStore } from '@/stores/mealPlan'
 
 function makeRouter() {
   return createRouter({
@@ -169,6 +170,33 @@ describe('RecipeDetailView actions', () => {
     expect(link.exists()).toBe(true)
     expect(link.attributes('href')).toBe('https://example.com/pasta')
     expect(link.attributes('target')).toBe('_blank')
+  })
+
+  it('shows the last used, next planned and total planned count', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    store.addRecipe({ name: 'Pasta', ingredients: ['pasta'], servings: 2 })
+    const id = store.recipes[0].id
+
+    const mealPlanStore = useMealPlanStore()
+    const today = new Date()
+    const past = new Date(today)
+    past.setDate(past.getDate() - 4)
+    const future = new Date(today)
+    future.setDate(future.getDate() + 2)
+    mealPlanStore.assign(past.toISOString().slice(0, 10), id)
+    mealPlanStore.assign(future.toISOString().slice(0, 10), id)
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-detail', params: { id } })
+    await router.isReady()
+
+    const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
+
+    expect(wrapper.text()).toContain('Last used 4 days ago')
+    expect(wrapper.text()).toContain('Next planned for in 2 days')
+    expect(wrapper.text()).toContain('Planned 2 times in total')
   })
 
   it('shows a not-found message for a missing recipe', async () => {
