@@ -21,10 +21,6 @@ const displayedRecipes = computed(() => {
   )
 })
 
-function recipeSubtitle(recipe: { servings: number; ingredients: string[] }) {
-  return `${recipe.servings} servings${recipe.ingredients.length ? ' · ' + recipe.ingredients.join(', ') : ''}`
-}
-
 function lastUsedLabel(recipeId: string) {
   const lastUsedDate = mealPlanStore.getLastUsedDate(recipeId)
   return lastUsedDate ? `Used ${formatRelativeTime(lastUsedDate)}` : 'Never used'
@@ -81,8 +77,7 @@ function lastUsedLabel(recipeId: string) {
             >
           </template>
           <template #subtitle>
-            <div>{{ recipeSubtitle(recipe) }}</div>
-            <div class="text-caption text-disabled">{{ lastUsedLabel(recipe.id) }}</div>
+            <span class="text-caption text-disabled">{{ lastUsedLabel(recipe.id) }}</span>
           </template>
         </v-list-item>
       </v-list>
