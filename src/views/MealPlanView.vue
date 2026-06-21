@@ -137,7 +137,7 @@ function onRecipeChange(date: string, value: string | null) {
                 size="small"
                 class="ml-2"
               />
-              <span class="text-caption text-disabled ml-2">{{ lastUsedLabel(item.value) }}</span>
+              <span class="last-used text-disabled ml-2">{{ lastUsedLabel(item.value) }}</span>
             </v-list-item>
           </template>
         </v-autocomplete>
@@ -162,5 +162,8 @@ function onRecipeChange(date: string, value: string | null) {
 .search-match {
   font-weight: 600;
   background: rgba(var(--v-theme-primary), 0.15);
+}
+.last-used {
+  font-size: 0.6875rem;
 }
 </style>

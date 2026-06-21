@@ -79,7 +79,7 @@ function lastUsedLabel(recipeId: string) {
             >
           </template>
           <template #subtitle>
-            <span class="text-caption text-disabled">{{ lastUsedLabel(recipe.id) }}</span>
+            <span class="last-used text-disabled">{{ lastUsedLabel(recipe.id) }}</span>
           </template>
         </v-list-item>
       </v-list>
@@ -105,5 +105,8 @@ function lastUsedLabel(recipeId: string) {
 .search-match {
   font-weight: 600;
   background: rgba(var(--v-theme-primary), 0.15);
+}
+.last-used {
+  font-size: 0.6875rem;
 }
 </style>
