@@ -107,6 +107,27 @@ describe('recipes store', () => {
     expect(store.getById(id)?.lastEditedAt).toBe(originalEditedAt)
   })
 
+  it('defaults favourite to false when adding a recipe', () => {
+    const store = useRecipesStore()
+    store.addRecipe({ name: 'Pasta', ingredients: [], servings: 2 })
+    expect(store.recipes[0].favourite).toBe(false)
+  })
+
+  it('toggles favourite without changing lastEditedAt', () => {
+    const store = useRecipesStore()
+    store.addRecipe({ name: 'Pasta', ingredients: [], servings: 2 })
+    const id = store.recipes[0].id
+    const originalEditedAt = store.recipes[0].lastEditedAt
+
+    store.toggleFavourite(id)
+    expect(store.getById(id)?.favourite).toBe(true)
+    expect(store.getById(id)?.lastEditedAt).toBe(originalEditedAt)
+
+    store.toggleFavourite(id)
+    expect(store.getById(id)?.favourite).toBe(false)
+    expect(store.getById(id)?.lastEditedAt).toBe(originalEditedAt)
+  })
+
   it('round-trips the optional url field', () => {
     const store = useRecipesStore()
     const created = store.addRecipe({

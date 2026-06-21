@@ -45,7 +45,9 @@ const weekDays = computed(() => {
 })
 
 const recipeSelectItems = computed(() =>
-  recipesStore.recipes.filter((r) => !r.archived).map((r) => ({ title: r.name, value: r.id }))
+  recipesStore.recipes
+    .filter((r) => !r.archived)
+    .map((r) => ({ title: r.name, value: r.id, favourite: r.favourite }))
 )
 
 function onRecipeChange(date: string, value: string | null) {
@@ -120,6 +122,13 @@ function onRecipeChange(date: string, value: string | null) {
                 :class="{ 'search-match': seg.matched }"
                 >{{ seg.text }}</span
               >
+              <v-icon
+                v-if="item.favourite"
+                icon="mdi-star"
+                color="yellow-darken-2"
+                size="small"
+                class="ml-2"
+              />
             </v-list-item>
           </template>
         </v-autocomplete>

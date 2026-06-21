@@ -23,6 +23,11 @@ function toggleArchive() {
     recipesStore.archiveRecipe(recipe.value.id)
   }
 }
+
+function toggleFavourite() {
+  if (!recipe.value) return
+  recipesStore.toggleFavourite(recipe.value.id)
+}
 </script>
 
 <template>
@@ -41,6 +46,12 @@ function toggleArchive() {
           icon="mdi-pencil"
           variant="tonal"
           @click="router.push({ name: 'recipe-edit', params: { id: recipe.id } })"
+        />
+        <v-btn
+          :icon="recipe.favourite ? 'mdi-star' : 'mdi-star-outline'"
+          variant="tonal"
+          :color="recipe.favourite ? 'yellow-darken-2' : undefined"
+          @click="toggleFavourite"
         />
         <v-btn
           :icon="recipe.archived ? 'mdi-archive-arrow-up' : 'mdi-archive-arrow-down'"

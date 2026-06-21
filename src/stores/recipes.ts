@@ -8,6 +8,7 @@ export interface Recipe {
   servings: number
   lastEditedAt: string
   archived: boolean
+  favourite: boolean
   url?: string
 }
 
@@ -32,19 +33,25 @@ export const useRecipesStore = defineStore('recipes', () => {
     [...recipes.value].sort((a, b) => editedAtMillis(b) - editedAtMillis(a))
   )
 
-  function addRecipe(recipe: Omit<Recipe, 'id' | 'lastEditedAt' | 'archived'>): Recipe {
+  function addRecipe(
+    recipe: Omit<Recipe, 'id' | 'lastEditedAt' | 'archived' | 'favourite'>
+  ): Recipe {
     const created: Recipe = {
       ...recipe,
       id: crypto.randomUUID(),
       lastEditedAt: new Date().toISOString(),
       archived: false,
+      favourite: false,
     }
     recipes.value.push(created)
     save(recipes.value)
     return created
   }
 
-  function updateRecipe(id: string, updates: Omit<Recipe, 'id' | 'lastEditedAt' | 'archived'>) {
+  function updateRecipe(
+    id: string,
+    updates: Omit<Recipe, 'id' | 'lastEditedAt' | 'archived' | 'favourite'>
+  ) {
     const recipe = recipes.value.find((r) => r.id === id)
     if (!recipe) return
     Object.assign(recipe, updates, { lastEditedAt: new Date().toISOString() })
@@ -74,6 +81,13 @@ export const useRecipesStore = defineStore('recipes', () => {
     save(recipes.value)
   }
 
+  function toggleFavourite(id: string) {
+    const recipe = recipes.value.find((r) => r.id === id)
+    if (!recipe) return
+    recipe.favourite = !recipe.favourite
+    save(recipes.value)
+  }
+
   return {
     recipes,
     recipeCount,
@@ -84,5 +98,6 @@ export const useRecipesStore = defineStore('recipes', () => {
     getById,
     archiveRecipe,
     unarchiveRecipe,
+    toggleFavourite,
   }
 })
