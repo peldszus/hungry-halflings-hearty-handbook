@@ -2,12 +2,28 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipesStore } from '@/stores/recipes'
+import { useMealPlanStore } from '@/stores/mealPlan'
+import { formatLastUsedLabel } from '@/utils/relativeTime'
 
 const route = useRoute()
 const router = useRouter()
 const recipesStore = useRecipesStore()
+const mealPlanStore = useMealPlanStore()
 
 const recipe = computed(() => recipesStore.getById(route.params.id as string))
+
+const usageLabel = computed(() => {
+  if (!recipe.value) return ''
+  return formatLastUsedLabel(
+    mealPlanStore.getLastUsedDate(recipe.value.id),
+    mealPlanStore.getNextPlannedDate(recipe.value.id)
+  )
+})
+
+const totalPlannedCount = computed(() => {
+  if (!recipe.value) return 0
+  return mealPlanStore.entries.filter((e) => e.recipeId === recipe.value!.id).length
+})
 
 function deleteRecipe() {
   if (!recipe.value) return
@@ -64,6 +80,10 @@ function toggleFavourite() {
       <p class="text-body-2 text-medium-emphasis mb-2">
         {{ recipe.servings }} servings · Last edited
         {{ new Date(recipe.lastEditedAt).toLocaleDateString() }}
+      </p>
+      <p class="text-body-2 text-medium-emphasis mb-2">
+        {{ usageLabel }} · Planned {{ totalPlannedCount }}
+        {{ totalPlannedCount === 1 ? 'time' : 'times' }} in total
       </p>
       <p v-if="recipe.url" class="mb-6">
         <a :href="recipe.url" target="_blank" rel="noopener noreferrer">{{ recipe.url }}</a>
