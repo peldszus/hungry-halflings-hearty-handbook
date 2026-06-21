@@ -54,19 +54,19 @@ describe('formatLastUsedLabel', () => {
     expect(formatLastUsedLabel(undefined, undefined, now)).toBe('Never used')
   })
 
-  it('returns only a "Used" label when there is no planned date', () => {
-    expect(formatLastUsedLabel('2026-06-21', undefined, now)).toBe('Used today')
-    expect(formatLastUsedLabel('2026-06-17', undefined, now)).toBe('Used 4 days ago')
+  it('returns only a "Last used" label when there is no planned date', () => {
+    expect(formatLastUsedLabel('2026-06-21', undefined, now)).toBe('Last used today')
+    expect(formatLastUsedLabel('2026-06-17', undefined, now)).toBe('Last used 4 days ago')
   })
 
-  it('returns only a "Planned for" label when there is no last-used date', () => {
-    expect(formatLastUsedLabel(undefined, '2026-06-22', now)).toBe('Planned for tomorrow')
-    expect(formatLastUsedLabel(undefined, '2026-06-25', now)).toBe('Planned for in 4 days')
+  it('returns only a "Next planned for" label when there is no last-used date', () => {
+    expect(formatLastUsedLabel(undefined, '2026-06-22', now)).toBe('Next planned for tomorrow')
+    expect(formatLastUsedLabel(undefined, '2026-06-25', now)).toBe('Next planned for in 4 days')
   })
 
   it('returns both labels when a recipe has been used before and is planned again', () => {
     expect(formatLastUsedLabel('2026-06-17', '2026-06-22', now)).toBe(
-      'Used 4 days ago · Planned for tomorrow'
+      'Last used 4 days ago · Next planned for tomorrow'
     )
   })
 })

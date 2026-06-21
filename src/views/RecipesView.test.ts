@@ -128,7 +128,7 @@ describe('RecipesView search filtering', () => {
     const items = wrapper.findAll('.v-list-item')
     const salad = items.find((item) => item.text().includes('Salad'))
     const toast = items.find((item) => item.text().includes('Toast'))
-    expect(salad?.text()).toContain('Used')
+    expect(salad?.text()).toContain('Last used')
     expect(salad?.text()).toContain('ago')
     expect(toast?.text()).toContain('Never used')
   })
@@ -151,7 +151,7 @@ describe('RecipesView search filtering', () => {
     const wrapper = mount(RecipesView, { global: { plugins: [router, pinia] } })
 
     const salad = wrapper.findAll('.v-list-item').find((item) => item.text().includes('Salad'))
-    expect(salad?.text()).toContain('Used')
-    expect(salad?.text()).toContain('Planned for')
+    expect(salad?.text()).toContain('Last used')
+    expect(salad?.text()).toContain('Next planned for')
   })
 })

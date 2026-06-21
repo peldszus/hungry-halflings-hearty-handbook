@@ -37,7 +37,7 @@ export function formatLastUsedLabel(
   now: Date = new Date()
 ): string {
   const parts: string[] = []
-  if (lastUsedDate) parts.push(`Used ${formatRelativeTime(lastUsedDate, now)}`)
-  if (nextPlannedDate) parts.push(`Planned for ${formatRelativeTime(nextPlannedDate, now)}`)
+  if (lastUsedDate) parts.push(`Last used ${formatRelativeTime(lastUsedDate, now)}`)
+  if (nextPlannedDate) parts.push(`Next planned for ${formatRelativeTime(nextPlannedDate, now)}`)
   return parts.length ? parts.join(' · ') : 'Never used'
 }
