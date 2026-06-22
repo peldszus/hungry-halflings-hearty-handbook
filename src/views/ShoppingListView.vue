@@ -1,7 +1,15 @@
 <script setup lang="ts">
-import { useShoppingListStore } from '@/stores/shoppingList'
+import { useShoppingListStore, type ShoppingListItem } from '@/stores/shoppingList'
 
 const store = useShoppingListStore()
+
+function itemLabel(item: ShoppingListItem) {
+  const parts: string[] = []
+  if (item.quantity != null) parts.push(String(item.quantity))
+  if (item.unit) parts.push(item.unit)
+  parts.push(item.ingredient)
+  return parts.join(' ')
+}
 </script>
 
 <template>
@@ -33,11 +41,7 @@ const store = useShoppingListStore()
           :key="`${item.ingredient}::${item.unit ?? ''}`"
           prepend-icon="mdi-checkbox-blank-circle-outline"
         >
-          <v-list-item-title>
-            <span v-if="item.quantity != null">{{ item.quantity }}</span>
-            <span v-if="item.unit">{{ item.unit }}</span>
-            {{ item.ingredient }}
-          </v-list-item-title>
+          <v-list-item-title>{{ itemLabel(item) }}</v-list-item-title>
         </v-list-item>
       </v-list>
     </v-card>

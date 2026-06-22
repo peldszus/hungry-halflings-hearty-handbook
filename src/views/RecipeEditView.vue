@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useRecipesStore, type Ingredient } from '@/stores/recipes'
 
@@ -18,7 +18,7 @@ const name = ref(existingRecipe.value?.name ?? '')
 const servings = ref(String(existingRecipe.value?.servings ?? 2))
 const url = ref(existingRecipe.value?.url ?? '')
 
-const unitSuggestions = ['g', 'kg', 'ml', 'l', 'tsp', 'tbsp']
+const unitSuggestions = ['g', 'kg', 'ml', 'l']
 
 function emptyRow(): Ingredient {
   return {
@@ -36,8 +36,13 @@ const ingredientRows = ref<Ingredient[]>(
     : [emptyRow()]
 )
 
-function addIngredientRow() {
+const ingredientCardRefs = ref<HTMLElement[]>([])
+
+async function addIngredientRow() {
   ingredientRows.value.push(emptyRow())
+  await nextTick()
+  const last = ingredientCardRefs.value[ingredientCardRefs.value.length - 1]
+  last?.scrollIntoView?.({ behavior: 'smooth', block: 'end' })
 }
 
 function removeIngredientRow(index: number) {
@@ -105,6 +110,11 @@ function save() {
         <v-card
           v-for="(row, index) in ingredientRows"
           :key="index"
+          :ref="
+            (el: any) => {
+              if (el) ingredientCardRefs[index] = el.$el ?? el
+            }
+          "
           variant="outlined"
           class="mb-3 pa-3"
         >

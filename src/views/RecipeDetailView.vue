@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useRecipesStore } from '@/stores/recipes'
+import { useRecipesStore, type Ingredient } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
 import { formatRelativeTime } from '@/utils/relativeTime'
 
@@ -47,6 +47,14 @@ function toggleArchive() {
 function toggleFavourite() {
   if (!recipe.value) return
   recipesStore.toggleFavourite(recipe.value.id)
+}
+
+function ingredientLabel(ingredient: Ingredient) {
+  const parts: string[] = []
+  if (ingredient.quantity != null) parts.push(String(ingredient.quantity))
+  if (ingredient.unit) parts.push(ingredient.unit)
+  parts.push(ingredient.ingredient)
+  return parts.join(' ')
 }
 </script>
 
@@ -102,9 +110,7 @@ function toggleFavourite() {
           prepend-icon="mdi-circle-small"
         >
           <v-list-item-title>
-            <span v-if="ingredient.quantity != null">{{ ingredient.quantity }}</span>
-            <span v-if="ingredient.unit">{{ ingredient.unit }}</span>
-            {{ ingredient.ingredient }}
+            {{ ingredientLabel(ingredient) }}
             <v-chip
               v-if="ingredient.isMain"
               size="x-small"
@@ -114,10 +120,17 @@ function toggleFavourite() {
             >
               Main
             </v-chip>
+            <v-chip
+              v-if="ingredient.addToShoppingList"
+              size="x-small"
+              color="secondary"
+              variant="tonal"
+              prepend-icon="mdi-cart"
+              class="ml-2"
+            >
+              Shopping list
+            </v-chip>
           </v-list-item-title>
-          <v-list-item-subtitle v-if="!ingredient.addToShoppingList">
-            Not on shopping list
-          </v-list-item-subtitle>
         </v-list-item>
       </v-list>
       <p v-else class="text-body-2 text-medium-emphasis font-italic">No ingredients listed.</p>

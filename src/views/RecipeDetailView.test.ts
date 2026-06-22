@@ -218,13 +218,16 @@ describe('RecipeDetailView actions', () => {
     expect(wrapper.text()).toContain('flour')
   })
 
-  it('shows a not-on-shopping-list note for excluded ingredients', async () => {
+  it('shows a shopping list chip only for ingredients flagged for it', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useRecipesStore()
     store.addRecipe({
       name: 'Stew',
-      ingredients: [{ ingredient: 'salt', isMain: false, addToShoppingList: false }],
+      ingredients: [
+        { ingredient: 'salt', isMain: false, addToShoppingList: false },
+        { ingredient: 'pork', isMain: false, addToShoppingList: true },
+      ],
       servings: 1,
     })
     const id = store.recipes[0].id
@@ -235,7 +238,11 @@ describe('RecipeDetailView actions', () => {
 
     const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
 
-    expect(wrapper.text()).toContain('Not on shopping list')
+    const items = wrapper.findAll('.v-list-item')
+    const salt = items.find((item) => item.text().includes('salt'))
+    const pork = items.find((item) => item.text().includes('pork'))
+    expect(salt?.text()).not.toContain('Shopping list')
+    expect(pork?.text()).toContain('Shopping list')
   })
 
   it('renders the recipe URL as a link when provided', async () => {
