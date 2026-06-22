@@ -1,10 +1,18 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
+export interface Ingredient {
+  ingredient: string
+  quantity?: number
+  unit?: string
+  isMain: boolean
+  addToShoppingList: boolean
+}
+
 export interface Recipe {
   id: string
   name: string
-  ingredients: string[]
+  ingredients: Ingredient[]
   servings: number
   lastEditedAt: string
   archived: boolean

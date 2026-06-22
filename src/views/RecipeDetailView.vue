@@ -95,13 +95,30 @@ function toggleFavourite() {
       </p>
 
       <h2 class="text-subtitle-1 font-weight-bold mb-2">Ingredients</h2>
-      <v-list v-if="recipe.ingredients.length" lines="one">
+      <v-list v-if="recipe.ingredients.length" lines="two">
         <v-list-item
-          v-for="ingredient in recipe.ingredients"
-          :key="ingredient"
-          :title="ingredient"
+          v-for="(ingredient, index) in recipe.ingredients"
+          :key="index"
           prepend-icon="mdi-circle-small"
-        />
+        >
+          <v-list-item-title>
+            <span v-if="ingredient.quantity != null">{{ ingredient.quantity }}</span>
+            <span v-if="ingredient.unit">{{ ingredient.unit }}</span>
+            {{ ingredient.ingredient }}
+            <v-chip
+              v-if="ingredient.isMain"
+              size="x-small"
+              color="primary"
+              variant="tonal"
+              class="ml-2"
+            >
+              Main
+            </v-chip>
+          </v-list-item-title>
+          <v-list-item-subtitle v-if="!ingredient.addToShoppingList">
+            Not on shopping list
+          </v-list-item-subtitle>
+        </v-list-item>
       </v-list>
       <p v-else class="text-body-2 text-medium-emphasis font-italic">No ingredients listed.</p>
     </template>

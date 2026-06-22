@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useRecipesStore } from '@/stores/recipes'
+import { useRecipesStore, type Ingredient } from '@/stores/recipes'
 
 const route = useRoute()
 const router = useRouter()
@@ -15,18 +15,54 @@ const existingRecipe = computed(() =>
 const notFound = computed(() => isEditMode.value && !existingRecipe.value)
 
 const name = ref(existingRecipe.value?.name ?? '')
-const ingredients = ref(existingRecipe.value?.ingredients.join(', ') ?? '')
 const servings = ref(String(existingRecipe.value?.servings ?? 2))
 const url = ref(existingRecipe.value?.url ?? '')
 
+const unitSuggestions = ['g', 'kg', 'ml', 'l', 'tsp', 'tbsp']
+
+function emptyRow(): Ingredient {
+  return {
+    ingredient: '',
+    quantity: undefined,
+    unit: undefined,
+    isMain: false,
+    addToShoppingList: true,
+  }
+}
+
+const ingredientRows = ref<Ingredient[]>(
+  existingRecipe.value?.ingredients.length
+    ? existingRecipe.value.ingredients.map((i) => ({ ...i }))
+    : [emptyRow()]
+)
+
+function addIngredientRow() {
+  ingredientRows.value.push(emptyRow())
+}
+
+function removeIngredientRow(index: number) {
+  ingredientRows.value.splice(index, 1)
+  if (ingredientRows.value.length === 0) ingredientRows.value.push(emptyRow())
+}
+
 function save() {
   if (!name.value.trim()) return
+  const ingredients: Ingredient[] = ingredientRows.value
+    .filter((row) => row.ingredient.trim())
+    .map((row) => ({
+      ingredient: row.ingredient.trim(),
+      quantity:
+        row.quantity != null && !Number.isNaN(Number(row.quantity))
+          ? Number(row.quantity)
+          : undefined,
+      unit: row.unit?.trim() || undefined,
+      isMain: row.isMain,
+      addToShoppingList: row.addToShoppingList,
+    }))
+
   const payload = {
     name: name.value.trim(),
-    ingredients: ingredients.value
-      .split(',')
-      .map((i) => i.trim())
-      .filter(Boolean),
+    ingredients,
     servings: parseInt(servings.value, 10) || 1,
     url: url.value.trim() || undefined,
   }
@@ -57,18 +93,95 @@ function save() {
       </h1>
 
       <v-form @submit.prevent="save">
-        <v-text-field v-model="name" label="Name" placeholder="Recipe name" required />
         <v-text-field
-          v-model="ingredients"
-          label="Ingredients"
-          placeholder="Comma-separated ingredients"
+          v-model="name"
+          label="Name"
+          placeholder="Recipe name"
+          required
+          data-testid="recipe-name"
         />
-        <v-text-field v-model="servings" label="Servings" type="number" min="1" />
+
+        <h2 class="text-subtitle-1 font-weight-bold mb-2">Ingredients</h2>
+        <v-card
+          v-for="(row, index) in ingredientRows"
+          :key="index"
+          variant="outlined"
+          class="mb-3 pa-3"
+        >
+          <v-row density="comfortable">
+            <v-col cols="12" sm="5">
+              <v-text-field
+                v-model="row.ingredient"
+                label="Ingredient"
+                placeholder="e.g. Onion"
+                hide-details="auto"
+              />
+            </v-col>
+            <v-col cols="6" sm="3">
+              <v-text-field
+                v-model.number="row.quantity"
+                label="Quantity"
+                type="number"
+                min="0"
+                step="any"
+                hide-details="auto"
+              />
+            </v-col>
+            <v-col cols="6" sm="3">
+              <v-combobox
+                v-model="row.unit"
+                :items="unitSuggestions"
+                label="Unit"
+                clearable
+                hide-details="auto"
+              />
+            </v-col>
+            <v-col cols="12" sm="1" class="d-flex align-center justify-end">
+              <v-btn
+                icon="mdi-delete"
+                variant="text"
+                color="error"
+                @click="removeIngredientRow(index)"
+              />
+            </v-col>
+          </v-row>
+          <v-row density="comfortable">
+            <v-col cols="6">
+              <v-checkbox
+                v-model="row.isMain"
+                label="Main ingredient"
+                hide-details
+                density="compact"
+              />
+            </v-col>
+            <v-col cols="6">
+              <v-checkbox
+                v-model="row.addToShoppingList"
+                label="Add to shopping list"
+                hide-details
+                density="compact"
+              />
+            </v-col>
+          </v-row>
+        </v-card>
+
+        <v-btn variant="tonal" prepend-icon="mdi-plus" class="mb-4" @click="addIngredientRow">
+          Add ingredient
+        </v-btn>
+
+        <v-text-field
+          v-model="servings"
+          label="Servings"
+          type="number"
+          min="1"
+          data-testid="recipe-servings"
+        />
         <v-text-field
           v-model="url"
           label="Recipe URL (optional)"
           placeholder="https://..."
           type="url"
+          data-testid="recipe-url"
         />
         <v-btn type="submit" color="primary" block>Save</v-btn>
       </v-form>

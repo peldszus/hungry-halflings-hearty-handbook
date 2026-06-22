@@ -115,7 +115,14 @@ describe('RecipesView search filtering', () => {
     setActivePinia(pinia)
     const store = useRecipesStore()
     const mealPlanStore = useMealPlanStore()
-    store.addRecipe({ name: 'Salad', ingredients: ['lettuce', 'tomato'], servings: 3 })
+    store.addRecipe({
+      name: 'Salad',
+      ingredients: [
+        { ingredient: 'lettuce', isMain: false, addToShoppingList: true },
+        { ingredient: 'tomato', isMain: false, addToShoppingList: true },
+      ],
+      servings: 3,
+    })
     store.addRecipe({ name: 'Toast', ingredients: [], servings: 1 })
     mealPlanStore.assign('2020-01-01', store.recipes[0].id)
 

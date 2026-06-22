@@ -30,10 +30,15 @@ const store = useShoppingListStore()
       <v-list v-else>
         <v-list-item
           v-for="item in store.items"
-          :key="item"
-          :title="item"
+          :key="`${item.ingredient}::${item.unit ?? ''}`"
           prepend-icon="mdi-checkbox-blank-circle-outline"
-        />
+        >
+          <v-list-item-title>
+            <span v-if="item.quantity != null">{{ item.quantity }}</span>
+            <span v-if="item.unit">{{ item.unit }}</span>
+            {{ item.ingredient }}
+          </v-list-item-title>
+        </v-list-item>
       </v-list>
     </v-card>
   </v-container>
