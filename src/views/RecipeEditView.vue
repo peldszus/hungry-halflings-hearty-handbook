@@ -116,63 +116,65 @@ function save() {
           v-for="(row, index) in ingredientRows"
           :key="index"
           variant="outlined"
-          class="mb-3 pa-3"
+          class="mb-3 pa-3 position-relative"
         >
-          <v-row density="comfortable">
-            <v-col cols="12" sm="5">
+          <v-btn
+            icon="mdi-delete"
+            size="x-small"
+            variant="text"
+            color="error"
+            class="position-absolute"
+            style="top: 4px; right: 4px"
+            @click="removeIngredientRow(index)"
+          />
+          <v-row density="compact" class="pe-8">
+            <v-col cols="6">
               <v-text-field
                 v-model="row.ingredient"
                 label="Ingredient"
                 placeholder="e.g. Onion"
+                density="compact"
                 hide-details="auto"
               />
             </v-col>
-            <v-col cols="6" sm="3">
+            <v-col cols="3">
               <v-text-field
                 v-model.number="row.quantity"
-                label="Quantity"
+                label="Qty"
                 type="number"
                 min="0"
                 step="any"
+                density="compact"
                 hide-details="auto"
               />
             </v-col>
-            <v-col cols="6" sm="3">
+            <v-col cols="3">
               <v-combobox
                 v-model="row.unit"
                 :items="unitSuggestions"
                 label="Unit"
                 clearable
+                density="compact"
                 hide-details="auto"
               />
             </v-col>
-            <v-col cols="12" sm="1" class="d-flex align-center justify-end">
-              <v-btn
-                icon="mdi-delete"
-                variant="text"
-                color="error"
-                @click="removeIngredientRow(index)"
-              />
-            </v-col>
           </v-row>
-          <v-row density="comfortable">
-            <v-col cols="6">
-              <v-checkbox
-                v-model="row.isMain"
-                label="Main ingredient"
-                hide-details
-                density="compact"
-              />
-            </v-col>
-            <v-col cols="6">
-              <v-checkbox
-                v-model="row.addToShoppingList"
-                label="Add to shopping list"
-                hide-details
-                density="compact"
-              />
-            </v-col>
-          </v-row>
+          <div class="d-flex ga-4">
+            <v-checkbox
+              v-model="row.isMain"
+              label="Main"
+              hide-details
+              density="compact"
+              class="text-caption flex-grow-0"
+            />
+            <v-checkbox
+              v-model="row.addToShoppingList"
+              label="Shop"
+              hide-details
+              density="compact"
+              class="text-caption flex-grow-0"
+            />
+          </div>
         </v-card>
 
         <v-btn
