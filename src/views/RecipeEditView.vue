@@ -36,13 +36,18 @@ const ingredientRows = ref<Ingredient[]>(
     : [emptyRow()]
 )
 
-const ingredientCardRefs = ref<HTMLElement[]>([])
+const addIngredientBtnRef = ref<{ $el: HTMLElement } | null>(null)
 
 async function addIngredientRow() {
   ingredientRows.value.push(emptyRow())
   await nextTick()
-  const last = ingredientCardRefs.value[ingredientCardRefs.value.length - 1]
-  last?.scrollIntoView?.({ behavior: 'smooth', block: 'end' })
+  await nextTick()
+  const btn = addIngredientBtnRef.value?.$el as HTMLElement | undefined
+  if (!btn) return
+  const bottomNav = document.querySelector('.v-bottom-navigation')
+  const bottomNavHeight = bottomNav?.getBoundingClientRect().height ?? 0
+  btn.style.scrollMarginBottom = `${bottomNavHeight + 16}px`
+  btn.scrollIntoView?.({ behavior: 'smooth', block: 'end' })
 }
 
 function removeIngredientRow(index: number) {
@@ -110,11 +115,6 @@ function save() {
         <v-card
           v-for="(row, index) in ingredientRows"
           :key="index"
-          :ref="
-            (el: any) => {
-              if (el) ingredientCardRefs[index] = el.$el ?? el
-            }
-          "
           variant="outlined"
           class="mb-3 pa-3"
         >
@@ -175,7 +175,13 @@ function save() {
           </v-row>
         </v-card>
 
-        <v-btn variant="tonal" prepend-icon="mdi-plus" class="mb-4" @click="addIngredientRow">
+        <v-btn
+          ref="addIngredientBtnRef"
+          variant="tonal"
+          prepend-icon="mdi-plus"
+          class="mb-4"
+          @click="addIngredientRow"
+        >
           Add ingredient
         </v-btn>
 

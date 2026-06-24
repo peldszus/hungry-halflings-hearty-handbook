@@ -241,8 +241,8 @@ describe('RecipeDetailView actions', () => {
     const items = wrapper.findAll('.v-list-item')
     const salt = items.find((item) => item.text().includes('salt'))
     const pork = items.find((item) => item.text().includes('pork'))
-    expect(salt?.text()).not.toContain('Shopping list')
-    expect(pork?.text()).toContain('Shopping list')
+    expect(salt?.find('.mdi-cart').exists()).toBe(false)
+    expect(pork?.find('.mdi-cart').exists()).toBe(true)
   })
 
   it('renders the recipe URL as a link when provided', async () => {

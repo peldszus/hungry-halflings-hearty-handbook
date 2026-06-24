@@ -126,10 +126,8 @@ function ingredientLabel(ingredient: Ingredient) {
               color="secondary"
               variant="tonal"
               prepend-icon="mdi-cart"
-              class="ml-2"
-            >
-              Shopping list
-            </v-chip>
+              class="ml-2 px-2"
+            />
           </v-list-item-title>
         </v-list-item>
       </v-list>
