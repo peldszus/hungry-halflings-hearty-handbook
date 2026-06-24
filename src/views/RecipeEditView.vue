@@ -116,27 +116,9 @@ function save() {
           v-for="(row, index) in ingredientRows"
           :key="index"
           variant="outlined"
-          class="mb-3 pa-3 position-relative"
+          class="mb-3 pa-3"
         >
-          <v-btn
-            icon="mdi-delete"
-            size="x-small"
-            variant="text"
-            color="error"
-            class="position-absolute"
-            style="top: 4px; right: 4px"
-            @click="removeIngredientRow(index)"
-          />
-          <v-row density="compact" class="pe-8">
-            <v-col cols="6">
-              <v-text-field
-                v-model="row.ingredient"
-                label="Ingredient"
-                placeholder="e.g. Onion"
-                density="compact"
-                hide-details="auto"
-              />
-            </v-col>
+          <v-row density="compact">
             <v-col cols="3">
               <v-text-field
                 v-model.number="row.quantity"
@@ -158,8 +140,17 @@ function save() {
                 hide-details="auto"
               />
             </v-col>
+            <v-col cols="6">
+              <v-text-field
+                v-model="row.ingredient"
+                label="Ingredient"
+                placeholder="e.g. Onion"
+                density="compact"
+                hide-details="auto"
+              />
+            </v-col>
           </v-row>
-          <div class="d-flex ga-4">
+          <div class="d-flex align-center ga-4">
             <v-checkbox
               v-model="row.isMain"
               label="Main"
@@ -173,6 +164,14 @@ function save() {
               hide-details
               density="compact"
               class="text-caption flex-grow-0"
+            />
+            <v-spacer />
+            <v-btn
+              icon="mdi-delete"
+              size="x-small"
+              variant="text"
+              color="error"
+              @click="removeIngredientRow(index)"
             />
           </div>
         </v-card>

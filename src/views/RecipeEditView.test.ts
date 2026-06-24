@@ -166,7 +166,7 @@ describe('RecipeEditView', () => {
     const wrapper = mount(RecipeEditView, { global: { plugins: [router, pinia] } })
     await fieldByTestId(wrapper, 'recipe-name').setValue('Bread')
 
-    const ingredientInput = wrapper.find('.v-card input[type="text"]')
+    const ingredientInput = wrapper.find('.v-card input[placeholder="e.g. Onion"]')
     await ingredientInput.setValue('flour')
 
     const quantityInput = wrapper.find('.v-card input[type="number"]')
