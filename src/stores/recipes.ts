@@ -41,6 +41,39 @@ export const useRecipesStore = defineStore('recipes', () => {
     [...recipes.value].sort((a, b) => editedAtMillis(b) - editedAtMillis(a))
   )
 
+  const knownIngredientNames = computed(() => {
+    const names = new Set<string>()
+    for (const recipe of recipes.value) {
+      for (const ing of recipe.ingredients) {
+        const name = ing.ingredient.trim()
+        if (name) names.add(name)
+      }
+    }
+    return [...names].sort((a, b) => a.localeCompare(b))
+  })
+
+  const knownUnits = computed(() => {
+    const units = new Set<string>()
+    for (const recipe of recipes.value) {
+      for (const ing of recipe.ingredients) {
+        const unit = ing.unit?.trim()
+        if (unit) units.add(unit)
+      }
+    }
+    return [...units].sort((a, b) => a.localeCompare(b))
+  })
+
+  const unitUsageCounts = computed(() => {
+    const counts = new Map<string, number>()
+    for (const recipe of recipes.value) {
+      for (const ing of recipe.ingredients) {
+        const unit = ing.unit?.trim()
+        if (unit) counts.set(unit, (counts.get(unit) ?? 0) + 1)
+      }
+    }
+    return counts
+  })
+
   function addRecipe(
     recipe: Omit<Recipe, 'id' | 'lastEditedAt' | 'archived' | 'favourite'>
   ): Recipe {
@@ -100,6 +133,9 @@ export const useRecipesStore = defineStore('recipes', () => {
     recipes,
     recipeCount,
     recentRecipes,
+    knownIngredientNames,
+    knownUnits,
+    unitUsageCounts,
     addRecipe,
     updateRecipe,
     removeRecipe,

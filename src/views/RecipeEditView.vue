@@ -18,7 +18,18 @@ const name = ref(existingRecipe.value?.name ?? '')
 const servings = ref(String(existingRecipe.value?.servings ?? 2))
 const url = ref(existingRecipe.value?.url ?? '')
 
-const unitSuggestions = ['g', 'kg', 'ml', 'l']
+const defaultUnitSuggestions = ['g', 'kg', 'ml', 'l']
+const unitSuggestions = computed(() => {
+  const counts = new Map(store.unitUsageCounts)
+  for (const unit of defaultUnitSuggestions) {
+    if (!counts.has(unit)) counts.set(unit, 0)
+  }
+  return [...counts.keys()].sort((a, b) => {
+    const countDiff = (counts.get(b) ?? 0) - (counts.get(a) ?? 0)
+    return countDiff !== 0 ? countDiff : a.localeCompare(b)
+  })
+})
+const ingredientSuggestions = computed(() => store.knownIngredientNames)
 
 function emptyRow(): Ingredient {
   return {
@@ -138,12 +149,15 @@ function save() {
                 />
               </v-col>
               <v-col cols="6">
-                <v-text-field
+                <v-combobox
                   v-model="row.ingredient"
+                  :items="ingredientSuggestions"
                   label="Ingredient"
                   placeholder="e.g. Onion"
+                  menu-icon=""
                   density="compact"
                   hide-details="auto"
+                  data-testid="ingredient-name"
                 />
               </v-col>
             </v-row>
