@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useRecipesStore } from '@/stores/recipes'
+import { useRecipesStore, type Ingredient } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
 import { formatRelativeTime } from '@/utils/relativeTime'
 
@@ -47,6 +47,14 @@ function toggleArchive() {
 function toggleFavourite() {
   if (!recipe.value) return
   recipesStore.toggleFavourite(recipe.value.id)
+}
+
+function ingredientLabel(ingredient: Ingredient) {
+  const parts: string[] = []
+  if (ingredient.quantity != null) parts.push(String(ingredient.quantity))
+  if (ingredient.unit) parts.push(ingredient.unit)
+  parts.push(ingredient.ingredient)
+  return parts.join(' ')
 }
 </script>
 
@@ -95,13 +103,33 @@ function toggleFavourite() {
       </p>
 
       <h2 class="text-subtitle-1 font-weight-bold mb-2">Ingredients</h2>
-      <v-list v-if="recipe.ingredients.length" lines="one">
+      <v-list v-if="recipe.ingredients.length" lines="two">
         <v-list-item
-          v-for="ingredient in recipe.ingredients"
-          :key="ingredient"
-          :title="ingredient"
+          v-for="(ingredient, index) in recipe.ingredients"
+          :key="index"
           prepend-icon="mdi-circle-small"
-        />
+        >
+          <v-list-item-title>
+            {{ ingredientLabel(ingredient) }}
+            <v-chip
+              v-if="ingredient.isMain"
+              size="x-small"
+              color="primary"
+              variant="tonal"
+              class="ml-2"
+            >
+              Main
+            </v-chip>
+            <v-chip
+              v-if="ingredient.addToShoppingList"
+              size="x-small"
+              color="secondary"
+              variant="tonal"
+              prepend-icon="mdi-cart"
+              class="ml-2 px-2"
+            />
+          </v-list-item-title>
+        </v-list-item>
       </v-list>
       <p v-else class="text-body-2 text-medium-emphasis font-italic">No ingredients listed.</p>
     </template>

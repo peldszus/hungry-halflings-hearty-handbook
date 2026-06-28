@@ -27,7 +27,11 @@ describe('RecipeDetailView favourite button', () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useRecipesStore()
-    store.addRecipe({ name: 'Pasta', ingredients: ['pasta'], servings: 2 })
+    store.addRecipe({
+      name: 'Pasta',
+      ingredients: [{ ingredient: 'pasta', isMain: false, addToShoppingList: true }],
+      servings: 2,
+    })
     const id = store.recipes[0].id
     const originalEditedAt = store.recipes[0].lastEditedAt
 
@@ -72,7 +76,11 @@ describe('RecipeDetailView actions', () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useRecipesStore()
-    store.addRecipe({ name: 'Pasta', ingredients: ['pasta'], servings: 2 })
+    store.addRecipe({
+      name: 'Pasta',
+      ingredients: [{ ingredient: 'pasta', isMain: false, addToShoppingList: true }],
+      servings: 2,
+    })
     const id = store.recipes[0].id
 
     const router = makeRouter()
@@ -91,7 +99,11 @@ describe('RecipeDetailView actions', () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useRecipesStore()
-    store.addRecipe({ name: 'Pasta', ingredients: ['pasta'], servings: 2 })
+    store.addRecipe({
+      name: 'Pasta',
+      ingredients: [{ ingredient: 'pasta', isMain: false, addToShoppingList: true }],
+      servings: 2,
+    })
     const id = store.recipes[0].id
 
     const router = makeRouter()
@@ -135,7 +147,14 @@ describe('RecipeDetailView actions', () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useRecipesStore()
-    store.addRecipe({ name: 'Salad', ingredients: ['lettuce', 'tomato'], servings: 1 })
+    store.addRecipe({
+      name: 'Salad',
+      ingredients: [
+        { ingredient: 'lettuce', isMain: false, addToShoppingList: true },
+        { ingredient: 'tomato', isMain: false, addToShoppingList: true },
+      ],
+      servings: 1,
+    })
     const id = store.recipes[0].id
 
     const router = makeRouter()
@@ -148,13 +167,91 @@ describe('RecipeDetailView actions', () => {
     expect(wrapper.text()).toContain('tomato')
   })
 
+  it('shows a Main chip for main ingredients', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    store.addRecipe({
+      name: 'Stew',
+      ingredients: [
+        { ingredient: 'pork', isMain: true, addToShoppingList: true },
+        { ingredient: 'pepper', isMain: false, addToShoppingList: true },
+      ],
+      servings: 1,
+    })
+    const id = store.recipes[0].id
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-detail', params: { id } })
+    await router.isReady()
+
+    const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
+
+    const listItems = wrapper.findAll('.v-list-item')
+    const pork = listItems.find((item) => item.text().includes('pork'))
+    const pepper = listItems.find((item) => item.text().includes('pepper'))
+    expect(pork?.text()).toContain('Main')
+    expect(pepper?.text()).not.toContain('Main')
+  })
+
+  it('shows quantity and unit inline', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    store.addRecipe({
+      name: 'Bread',
+      ingredients: [
+        { ingredient: 'flour', quantity: 200, unit: 'g', isMain: false, addToShoppingList: true },
+      ],
+      servings: 1,
+    })
+    const id = store.recipes[0].id
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-detail', params: { id } })
+    await router.isReady()
+
+    const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
+
+    expect(wrapper.text()).toContain('200')
+    expect(wrapper.text()).toContain('g')
+    expect(wrapper.text()).toContain('flour')
+  })
+
+  it('shows a shopping list chip only for ingredients flagged for it', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    store.addRecipe({
+      name: 'Stew',
+      ingredients: [
+        { ingredient: 'salt', isMain: false, addToShoppingList: false },
+        { ingredient: 'pork', isMain: false, addToShoppingList: true },
+      ],
+      servings: 1,
+    })
+    const id = store.recipes[0].id
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-detail', params: { id } })
+    await router.isReady()
+
+    const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
+
+    const items = wrapper.findAll('.v-list-item')
+    const salt = items.find((item) => item.text().includes('salt'))
+    const pork = items.find((item) => item.text().includes('pork'))
+    expect(salt?.find('.mdi-cart').exists()).toBe(false)
+    expect(pork?.find('.mdi-cart').exists()).toBe(true)
+  })
+
   it('renders the recipe URL as a link when provided', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useRecipesStore()
     store.addRecipe({
       name: 'Pasta',
-      ingredients: ['pasta'],
+      ingredients: [{ ingredient: 'pasta', isMain: false, addToShoppingList: true }],
       servings: 2,
       url: 'https://example.com/pasta',
     })
@@ -176,7 +273,11 @@ describe('RecipeDetailView actions', () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useRecipesStore()
-    store.addRecipe({ name: 'Pasta', ingredients: ['pasta'], servings: 2 })
+    store.addRecipe({
+      name: 'Pasta',
+      ingredients: [{ ingredient: 'pasta', isMain: false, addToShoppingList: true }],
+      servings: 2,
+    })
     const id = store.recipes[0].id
 
     const mealPlanStore = useMealPlanStore()

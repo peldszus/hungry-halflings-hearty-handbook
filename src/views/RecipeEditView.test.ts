@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHashHistory } from 'vue-router'
@@ -15,6 +15,10 @@ function makeRouter() {
       { path: '/recipes', name: 'recipes', component: { template: '<div />' } },
     ],
   })
+}
+
+function fieldByTestId(wrapper: ReturnType<typeof mount>, testId: string) {
+  return wrapper.find(`[data-testid="${testId}"] input`)
 }
 
 describe('RecipeEditView', () => {
@@ -38,7 +42,11 @@ describe('RecipeEditView', () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useRecipesStore()
-    store.addRecipe({ name: 'Pasta', ingredients: ['pasta'], servings: 2 })
+    store.addRecipe({
+      name: 'Pasta',
+      ingredients: [{ ingredient: 'pasta', isMain: false, addToShoppingList: true }],
+      servings: 2,
+    })
     const id = store.recipes[0].id
 
     const router = makeRouter()
@@ -76,9 +84,10 @@ describe('RecipeEditView', () => {
     await router.isReady()
 
     const wrapper = mount(RecipeEditView, { global: { plugins: [router, pinia] } })
-    await wrapper.find('input').setValue('New Recipe')
+    await fieldByTestId(wrapper, 'recipe-name').setValue('New Recipe')
     await wrapper.find('form').trigger('submit.prevent')
     await flushPromises()
+    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('recipe-detail'))
 
     const newRecipe = store.recipes.find((r) => r.name === 'New Recipe')
     expect(router.currentRoute.value.name).toBe('recipe-detail')
@@ -95,9 +104,8 @@ describe('RecipeEditView', () => {
     await router.isReady()
 
     const wrapper = mount(RecipeEditView, { global: { plugins: [router, pinia] } })
-    const inputs = wrapper.findAll('input')
-    await inputs[0].setValue('Linked Recipe')
-    await inputs[3].setValue('https://example.com/recipe')
+    await fieldByTestId(wrapper, 'recipe-name').setValue('Linked Recipe')
+    await fieldByTestId(wrapper, 'recipe-url').setValue('https://example.com/recipe')
     await wrapper.find('form').trigger('submit.prevent')
     await flushPromises()
 
@@ -115,11 +123,66 @@ describe('RecipeEditView', () => {
     await router.isReady()
 
     const wrapper = mount(RecipeEditView, { global: { plugins: [router, pinia] } })
-    await wrapper.find('input').setValue('No Link Recipe')
+    await fieldByTestId(wrapper, 'recipe-name').setValue('No Link Recipe')
     await wrapper.find('form').trigger('submit.prevent')
     await flushPromises()
 
     const newRecipe = store.recipes.find((r) => r.name === 'No Link Recipe')
     expect(newRecipe?.url).toBeUndefined()
+  })
+
+  it('adds and removes ingredient rows', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const router = makeRouter()
+    router.push({ name: 'recipe-new' })
+    await router.isReady()
+
+    const wrapper = mount(RecipeEditView, { global: { plugins: [router, pinia] } })
+
+    expect(wrapper.findAll('.ingredient-row').length).toBe(1)
+
+    const addButton = wrapper.findAll('button').find((b) => b.text().includes('Add ingredient'))
+    await addButton?.trigger('click')
+
+    expect(wrapper.findAll('.ingredient-row').length).toBe(2)
+
+    const deleteButtons = wrapper.findAll('i.mdi-delete')
+    await deleteButtons[0].element.closest('button')?.dispatchEvent(new Event('click'))
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.findAll('.ingredient-row').length).toBe(1)
+  })
+
+  it('saves ingredient name, quantity, unit and flags', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-new' })
+    await router.isReady()
+
+    const wrapper = mount(RecipeEditView, { global: { plugins: [router, pinia] } })
+    await fieldByTestId(wrapper, 'recipe-name').setValue('Bread')
+
+    const ingredientInput = wrapper.find('.ingredient-row input[placeholder="e.g. Onion"]')
+    await ingredientInput.setValue('flour')
+
+    const quantityInput = wrapper.find('.ingredient-row input[type="number"]')
+    await quantityInput.setValue('200')
+
+    const checkboxes = wrapper.findAll('.ingredient-row input[type="checkbox"]')
+    await checkboxes[0].setValue(true)
+
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    const newRecipe = store.recipes.find((r) => r.name === 'Bread')
+    expect(newRecipe?.ingredients).toHaveLength(1)
+    expect(newRecipe?.ingredients[0].ingredient).toBe('flour')
+    expect(newRecipe?.ingredients[0].quantity).toBe(200)
+    expect(newRecipe?.ingredients[0].isMain).toBe(true)
+    expect(newRecipe?.ingredients[0].addToShoppingList).toBe(true)
   })
 })
