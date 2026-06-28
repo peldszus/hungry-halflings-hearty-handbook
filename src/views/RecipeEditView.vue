@@ -132,6 +132,7 @@ function save() {
                   v-model="row.unit"
                   :items="unitSuggestions"
                   label="Unit"
+                  menu-icon=""
                   density="compact"
                   hide-details="auto"
                 />
