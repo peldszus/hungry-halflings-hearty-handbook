@@ -63,6 +63,17 @@ export const useRecipesStore = defineStore('recipes', () => {
     return [...units].sort((a, b) => a.localeCompare(b))
   })
 
+  const unitUsageCounts = computed(() => {
+    const counts = new Map<string, number>()
+    for (const recipe of recipes.value) {
+      for (const ing of recipe.ingredients) {
+        const unit = ing.unit?.trim()
+        if (unit) counts.set(unit, (counts.get(unit) ?? 0) + 1)
+      }
+    }
+    return counts
+  })
+
   function addRecipe(
     recipe: Omit<Recipe, 'id' | 'lastEditedAt' | 'archived' | 'favourite'>
   ): Recipe {
@@ -124,6 +135,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     recentRecipes,
     knownIngredientNames,
     knownUnits,
+    unitUsageCounts,
     addRecipe,
     updateRecipe,
     removeRecipe,

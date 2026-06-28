@@ -234,4 +234,22 @@ describe('recipes store', () => {
     expect(store.knownIngredientNames).toEqual(['pepper'])
     expect(store.knownUnits).toEqual([])
   })
+
+  it('counts how many times each unit is used across all recipes', () => {
+    const store = useRecipesStore()
+    store.addRecipe({
+      name: 'Soup',
+      ingredients: [ing('flour', { unit: 'g' }), ing('salt', { unit: 'g' })],
+      servings: 2,
+    })
+    store.addRecipe({
+      name: 'Bread',
+      ingredients: [ing('water', { unit: 'ml' })],
+      servings: 1,
+    })
+
+    expect(store.unitUsageCounts.get('g')).toBe(2)
+    expect(store.unitUsageCounts.get('ml')).toBe(1)
+    expect(store.unitUsageCounts.has('kg')).toBe(false)
+  })
 })

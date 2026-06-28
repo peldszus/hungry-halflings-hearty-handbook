@@ -19,9 +19,16 @@ const servings = ref(String(existingRecipe.value?.servings ?? 2))
 const url = ref(existingRecipe.value?.url ?? '')
 
 const defaultUnitSuggestions = ['g', 'kg', 'ml', 'l']
-const unitSuggestions = computed(() =>
-  [...new Set([...defaultUnitSuggestions, ...store.knownUnits])].sort((a, b) => a.localeCompare(b))
-)
+const unitSuggestions = computed(() => {
+  const counts = new Map(store.unitUsageCounts)
+  for (const unit of defaultUnitSuggestions) {
+    if (!counts.has(unit)) counts.set(unit, 0)
+  }
+  return [...counts.keys()].sort((a, b) => {
+    const countDiff = (counts.get(b) ?? 0) - (counts.get(a) ?? 0)
+    return countDiff !== 0 ? countDiff : a.localeCompare(b)
+  })
+})
 const ingredientSuggestions = computed(() => store.knownIngredientNames)
 
 function emptyRow(): Ingredient {
