@@ -205,4 +205,33 @@ describe('recipes store', () => {
     expect(store2.recipeCount).toBe(1)
     expect(store2.recipes[0].name).toBe('Salad')
   })
+
+  it('derives deduped, sorted ingredient names and units across all recipes', () => {
+    const store = useRecipesStore()
+    store.addRecipe({
+      name: 'Soup',
+      ingredients: [ing('flour', { unit: 'kg' }), ing('salt')],
+      servings: 2,
+    })
+    store.addRecipe({
+      name: 'Bread',
+      ingredients: [ing('flour', { unit: 'g' }), ing('water', { unit: 'ml' })],
+      servings: 1,
+    })
+
+    expect(store.knownIngredientNames).toEqual(['flour', 'salt', 'water'])
+    expect(store.knownUnits).toEqual(['g', 'kg', 'ml'])
+  })
+
+  it('excludes blank ingredient names and units from the known lists', () => {
+    const store = useRecipesStore()
+    store.addRecipe({
+      name: 'Draft',
+      ingredients: [ing('  '), ing('pepper', { unit: '  ' })],
+      servings: 1,
+    })
+
+    expect(store.knownIngredientNames).toEqual(['pepper'])
+    expect(store.knownUnits).toEqual([])
+  })
 })

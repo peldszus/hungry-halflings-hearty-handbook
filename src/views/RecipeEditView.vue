@@ -18,7 +18,11 @@ const name = ref(existingRecipe.value?.name ?? '')
 const servings = ref(String(existingRecipe.value?.servings ?? 2))
 const url = ref(existingRecipe.value?.url ?? '')
 
-const unitSuggestions = ['g', 'kg', 'ml', 'l']
+const defaultUnitSuggestions = ['g', 'kg', 'ml', 'l']
+const unitSuggestions = computed(() =>
+  [...new Set([...defaultUnitSuggestions, ...store.knownUnits])].sort((a, b) => a.localeCompare(b))
+)
+const ingredientSuggestions = computed(() => store.knownIngredientNames)
 
 function emptyRow(): Ingredient {
   return {
@@ -138,12 +142,15 @@ function save() {
                 />
               </v-col>
               <v-col cols="6">
-                <v-text-field
+                <v-combobox
                   v-model="row.ingredient"
+                  :items="ingredientSuggestions"
                   label="Ingredient"
                   placeholder="e.g. Onion"
+                  menu-icon=""
                   density="compact"
                   hide-details="auto"
+                  data-testid="ingredient-name"
                 />
               </v-col>
             </v-row>

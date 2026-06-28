@@ -41,6 +41,28 @@ export const useRecipesStore = defineStore('recipes', () => {
     [...recipes.value].sort((a, b) => editedAtMillis(b) - editedAtMillis(a))
   )
 
+  const knownIngredientNames = computed(() => {
+    const names = new Set<string>()
+    for (const recipe of recipes.value) {
+      for (const ing of recipe.ingredients) {
+        const name = ing.ingredient.trim()
+        if (name) names.add(name)
+      }
+    }
+    return [...names].sort((a, b) => a.localeCompare(b))
+  })
+
+  const knownUnits = computed(() => {
+    const units = new Set<string>()
+    for (const recipe of recipes.value) {
+      for (const ing of recipe.ingredients) {
+        const unit = ing.unit?.trim()
+        if (unit) units.add(unit)
+      }
+    }
+    return [...units].sort((a, b) => a.localeCompare(b))
+  })
+
   function addRecipe(
     recipe: Omit<Recipe, 'id' | 'lastEditedAt' | 'archived' | 'favourite'>
   ): Recipe {
@@ -100,6 +122,8 @@ export const useRecipesStore = defineStore('recipes', () => {
     recipes,
     recipeCount,
     recentRecipes,
+    knownIngredientNames,
+    knownUnits,
     addRecipe,
     updateRecipe,
     removeRecipe,
