@@ -116,7 +116,7 @@ function save() {
           <v-divider v-if="index > 0" class="my-3" />
           <div class="ingredient-row py-1">
             <v-row density="compact">
-              <v-col cols="2">
+              <v-col cols="3">
                 <v-text-field
                   v-model.number="row.quantity"
                   label="Qty"
@@ -127,7 +127,7 @@ function save() {
                   hide-details="auto"
                 />
               </v-col>
-              <v-col cols="4">
+              <v-col cols="3">
                 <v-combobox
                   v-model="row.unit"
                   :items="unitSuggestions"
