@@ -112,69 +112,66 @@ function save() {
         />
 
         <h2 class="text-subtitle-1 font-weight-bold mb-2">Ingredients</h2>
-        <v-card
-          v-for="(row, index) in ingredientRows"
-          :key="index"
-          variant="outlined"
-          class="mb-3 pa-3"
-        >
-          <v-row density="compact">
-            <v-col cols="2">
-              <v-text-field
-                v-model.number="row.quantity"
-                label="Qty"
-                type="number"
-                min="0"
-                step="any"
+        <template v-for="(row, index) in ingredientRows" :key="index">
+          <v-divider v-if="index > 0" class="my-3" />
+          <div class="ingredient-row py-1">
+            <v-row density="compact">
+              <v-col cols="2">
+                <v-text-field
+                  v-model.number="row.quantity"
+                  label="Qty"
+                  type="number"
+                  min="0"
+                  step="any"
+                  density="compact"
+                  hide-details="auto"
+                />
+              </v-col>
+              <v-col cols="4">
+                <v-combobox
+                  v-model="row.unit"
+                  :items="unitSuggestions"
+                  label="Unit"
+                  density="compact"
+                  hide-details="auto"
+                />
+              </v-col>
+              <v-col cols="6">
+                <v-text-field
+                  v-model="row.ingredient"
+                  label="Ingredient"
+                  placeholder="e.g. Onion"
+                  density="compact"
+                  hide-details="auto"
+                />
+              </v-col>
+            </v-row>
+            <div class="d-flex align-center ga-4">
+              <v-checkbox
+                v-model="row.isMain"
+                label="Main"
+                hide-details
                 density="compact"
-                hide-details="auto"
+                class="text-caption flex-grow-0"
               />
-            </v-col>
-            <v-col cols="4">
-              <v-combobox
-                v-model="row.unit"
-                :items="unitSuggestions"
-                label="Unit"
-                clearable
+              <v-checkbox
+                v-model="row.addToShoppingList"
+                label="Shop"
+                hide-details
                 density="compact"
-                hide-details="auto"
+                class="text-caption flex-grow-0"
               />
-            </v-col>
-            <v-col cols="6">
-              <v-text-field
-                v-model="row.ingredient"
-                label="Ingredient"
-                placeholder="e.g. Onion"
-                density="compact"
-                hide-details="auto"
+              <v-spacer />
+              <v-btn
+                icon="mdi-delete"
+                size="x-small"
+                variant="text"
+                color="error"
+                @click="removeIngredientRow(index)"
               />
-            </v-col>
-          </v-row>
-          <div class="d-flex align-center ga-4">
-            <v-checkbox
-              v-model="row.isMain"
-              label="Main"
-              hide-details
-              density="compact"
-              class="text-caption flex-grow-0"
-            />
-            <v-checkbox
-              v-model="row.addToShoppingList"
-              label="Shop"
-              hide-details
-              density="compact"
-              class="text-caption flex-grow-0"
-            />
-            <v-spacer />
-            <v-btn
-              icon="mdi-delete"
-              size="x-small"
-              variant="text"
-              color="error"
-              @click="removeIngredientRow(index)"
-            />
+            </div>
           </div>
-        </v-card>
+        </template>
 
         <v-btn
           ref="addIngredientBtnRef"

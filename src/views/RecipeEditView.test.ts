@@ -140,18 +140,18 @@ describe('RecipeEditView', () => {
 
     const wrapper = mount(RecipeEditView, { global: { plugins: [router, pinia] } })
 
-    expect(wrapper.findAll('.v-card').length).toBe(1)
+    expect(wrapper.findAll('.ingredient-row').length).toBe(1)
 
     const addButton = wrapper.findAll('button').find((b) => b.text().includes('Add ingredient'))
     await addButton?.trigger('click')
 
-    expect(wrapper.findAll('.v-card').length).toBe(2)
+    expect(wrapper.findAll('.ingredient-row').length).toBe(2)
 
     const deleteButtons = wrapper.findAll('i.mdi-delete')
     await deleteButtons[0].element.closest('button')?.dispatchEvent(new Event('click'))
     await wrapper.vm.$nextTick()
 
-    expect(wrapper.findAll('.v-card').length).toBe(1)
+    expect(wrapper.findAll('.ingredient-row').length).toBe(1)
   })
 
   it('saves ingredient name, quantity, unit and flags', async () => {
@@ -166,13 +166,13 @@ describe('RecipeEditView', () => {
     const wrapper = mount(RecipeEditView, { global: { plugins: [router, pinia] } })
     await fieldByTestId(wrapper, 'recipe-name').setValue('Bread')
 
-    const ingredientInput = wrapper.find('.v-card input[placeholder="e.g. Onion"]')
+    const ingredientInput = wrapper.find('.ingredient-row input[placeholder="e.g. Onion"]')
     await ingredientInput.setValue('flour')
 
-    const quantityInput = wrapper.find('.v-card input[type="number"]')
+    const quantityInput = wrapper.find('.ingredient-row input[type="number"]')
     await quantityInput.setValue('200')
 
-    const checkboxes = wrapper.findAll('.v-card input[type="checkbox"]')
+    const checkboxes = wrapper.findAll('.ingredient-row input[type="checkbox"]')
     await checkboxes[0].setValue(true)
 
     await wrapper.find('form').trigger('submit.prevent')
