@@ -17,6 +17,7 @@ const notFound = computed(() => isEditMode.value && !existingRecipe.value)
 const name = ref(existingRecipe.value?.name ?? '')
 const servings = ref(String(existingRecipe.value?.servings ?? 2))
 const url = ref(existingRecipe.value?.url ?? '')
+const labels = ref<string[]>(existingRecipe.value?.labels ? [...existingRecipe.value.labels] : [])
 
 const defaultUnitSuggestions = ['g', 'kg', 'ml', 'l']
 const unitSuggestions = computed(() => {
@@ -30,6 +31,7 @@ const unitSuggestions = computed(() => {
   })
 })
 const ingredientSuggestions = computed(() => store.knownIngredientNames)
+const labelSuggestions = computed(() => store.knownLabels)
 
 function emptyRow(): Ingredient {
   return {
@@ -81,9 +83,20 @@ function save() {
       addToShoppingList: row.addToShoppingList,
     }))
 
+  const seen = new Set<string>()
+  const cleanedLabels: string[] = []
+  for (const label of labels.value) {
+    const trimmed = label.trim()
+    if (trimmed && !seen.has(trimmed)) {
+      seen.add(trimmed)
+      cleanedLabels.push(trimmed)
+    }
+  }
+
   const payload = {
     name: name.value.trim(),
     ingredients,
+    labels: cleanedLabels,
     servings: parseInt(servings.value, 10) || 1,
     url: url.value.trim() || undefined,
   }
@@ -121,6 +134,24 @@ function save() {
           required
           data-testid="recipe-name"
         />
+
+        <v-combobox
+          v-model="labels"
+          :items="labelSuggestions"
+          label="Labels"
+          placeholder="Add a label"
+          multiple
+          chips
+          closable-chips
+          menu-icon=""
+          hide-details="auto"
+          class="mb-4"
+          data-testid="recipe-labels"
+        >
+          <template #chip="{ props: chipProps }">
+            <v-chip v-bind="chipProps" color="primary" variant="tonal" />
+          </template>
+        </v-combobox>
 
         <h2 class="text-subtitle-1 font-weight-bold mb-2">Ingredients</h2>
         <template v-for="(row, index) in ingredientRows" :key="index">

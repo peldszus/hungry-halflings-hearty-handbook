@@ -131,6 +131,50 @@ describe('RecipeEditView', () => {
     expect(newRecipe?.url).toBeUndefined()
   })
 
+  it('saves labels entered in the labels field', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-new' })
+    await router.isReady()
+
+    const wrapper = mount(RecipeEditView, { global: { plugins: [router, pinia] } })
+    await fieldByTestId(wrapper, 'recipe-name').setValue('Tagged Recipe')
+
+    const labelsCombobox = wrapper.findComponent('[data-testid="recipe-labels"]')
+    await labelsCombobox.setValue(['vegetarian', 'quick'])
+
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    const newRecipe = store.recipes.find((r) => r.name === 'Tagged Recipe')
+    expect(newRecipe?.labels).toEqual(['vegetarian', 'quick'])
+  })
+
+  it('prefills existing labels in edit mode', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    store.addRecipe({
+      name: 'Pasta',
+      ingredients: [],
+      labels: ['dinner', 'italian'],
+      servings: 2,
+    })
+    const id = store.recipes[0].id
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-edit', params: { id } })
+    await router.isReady()
+
+    const wrapper = mount(RecipeEditView, { global: { plugins: [router, pinia] } })
+    const labelsField = wrapper.find('[data-testid="recipe-labels"]')
+    expect(labelsField.text()).toContain('dinner')
+    expect(labelsField.text()).toContain('italian')
+  })
+
   it('adds and removes ingredient rows', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)

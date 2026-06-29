@@ -56,6 +56,45 @@ describe('MealPlanView favourite indicator', () => {
   })
 })
 
+describe('MealPlanView recipe labels', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    setActivePinia(createPinia())
+  })
+
+  it('shows label chips for recipes in the picker dropdown', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    store.addRecipe({ name: 'Tagged Curry', ingredients: [], labels: ['spicy'], servings: 2 })
+
+    const router = makeRouter()
+    router.push({ name: 'meal-plan' })
+    await router.isReady()
+
+    const wrapper = mount(MealPlanView, {
+      global: { plugins: [router, pinia] },
+      attachTo: document.body,
+    })
+
+    wrapper.find('i.mdi-pencil').element.closest('button')?.dispatchEvent(new Event('click'))
+    await wrapper.vm.$nextTick()
+
+    const input = wrapper.find('input')
+    await input.trigger('mousedown')
+    await input.trigger('focus')
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    const items = Array.from(document.querySelectorAll('.v-list-item'))
+    const curryItem = items.find((item) => item.textContent?.includes('Tagged Curry'))
+    expect(curryItem?.querySelector('.v-chip')?.textContent).toContain('spicy')
+    // The chip must live in the content area, not the clamped (overflow-hidden) subtitle.
+    expect(curryItem?.querySelector('.v-list-item-subtitle .v-chip')).toBeNull()
+
+    wrapper.unmount()
+  })
+})
+
 function clickIconButton(wrapper: ReturnType<typeof mount>, iconClass: string) {
   wrapper.find(`i.${iconClass}`).element.closest('button')?.dispatchEvent(new Event('click'))
 }

@@ -235,6 +235,52 @@ describe('recipes store', () => {
     expect(store.knownUnits).toEqual([])
   })
 
+  it('round-trips labels through add, update and localStorage', () => {
+    const store = useRecipesStore()
+    const created = store.addRecipe({
+      name: 'Curry',
+      ingredients: [],
+      labels: ['vegetarian', 'quick'],
+      servings: 2,
+    })
+    expect(store.getById(created.id)?.labels).toEqual(['vegetarian', 'quick'])
+
+    const saved = JSON.parse(localStorage.getItem('recipes') ?? '[]')
+    expect(saved[0].labels).toEqual(['vegetarian', 'quick'])
+
+    store.updateRecipe(created.id, {
+      name: 'Curry',
+      ingredients: [],
+      labels: ['spicy'],
+      servings: 2,
+    })
+    expect(store.getById(created.id)?.labels).toEqual(['spicy'])
+  })
+
+  it('derives deduped, sorted labels and ignores blanks across all recipes', () => {
+    const store = useRecipesStore()
+    store.addRecipe({ name: 'A', ingredients: [], labels: ['dinner', 'quick'], servings: 1 })
+    store.addRecipe({ name: 'B', ingredients: [], labels: ['quick', '  ', 'dessert'], servings: 1 })
+
+    expect(store.knownLabels).toEqual(['dessert', 'dinner', 'quick'])
+  })
+
+  it('handles recipes without a labels field when deriving knownLabels', () => {
+    const store = useRecipesStore()
+    store.addRecipe({ name: 'Tagged', ingredients: [], labels: ['vegan'], servings: 1 })
+    store.recipes.push({
+      id: 'legacy-1',
+      name: 'Legacy',
+      ingredients: [],
+      servings: 1,
+      lastEditedAt: new Date().toISOString(),
+      archived: false,
+      favourite: false,
+    } as unknown as Recipe)
+
+    expect(store.knownLabels).toEqual(['vegan'])
+  })
+
   it('counts how many times each unit is used across all recipes', () => {
     const store = useRecipesStore()
     store.addRecipe({

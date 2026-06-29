@@ -66,6 +66,50 @@ function iconButton(wrapper: ReturnType<typeof mount>, iconClass: string) {
   return wrapper.find(`i.${iconClass}`).element.closest('button')
 }
 
+describe('RecipeDetailView labels', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    setActivePinia(createPinia())
+  })
+
+  it('shows label chips when the recipe has labels', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    store.addRecipe({
+      name: 'Curry',
+      ingredients: [],
+      labels: ['vegetarian', 'spicy'],
+      servings: 2,
+    })
+    const id = store.recipes[0].id
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-detail', params: { id } })
+    await router.isReady()
+
+    const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
+    const chipText = wrapper.findAll('.v-chip').map((c) => c.text())
+    expect(chipText).toContain('vegetarian')
+    expect(chipText).toContain('spicy')
+  })
+
+  it('shows no label chips when the recipe has no labels', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    store.addRecipe({ name: 'Plain', ingredients: [], servings: 2 })
+    const id = store.recipes[0].id
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-detail', params: { id } })
+    await router.isReady()
+
+    const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
+    expect(wrapper.findAll('.v-chip')).toHaveLength(0)
+  })
+})
+
 describe('RecipeDetailView actions', () => {
   beforeEach(() => {
     localStorage.clear()
