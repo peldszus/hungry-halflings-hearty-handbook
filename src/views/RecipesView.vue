@@ -16,8 +16,10 @@ const displayedRecipes = computed(() => {
   if (!searchText.value.trim()) {
     return store.recentRecipes
   }
-  return store.recentRecipes.filter((r) =>
-    r.name.toLowerCase().includes(searchText.value.toLowerCase())
+  const q = searchText.value.toLowerCase()
+  return store.recentRecipes.filter(
+    (r) =>
+      r.name.toLowerCase().includes(q) || (r.labels ?? []).some((l) => l.toLowerCase().includes(q))
   )
 })
 
@@ -80,6 +82,17 @@ function lastUsedLabel(recipeId: string) {
           </template>
           <template #subtitle>
             <span class="last-used text-disabled">{{ lastUsedLabel(recipe.id) }}</span>
+            <div v-if="(recipe.labels ?? []).length" class="d-flex flex-wrap ga-1 mt-1">
+              <v-chip
+                v-for="label in recipe.labels"
+                :key="label"
+                size="x-small"
+                color="primary"
+                variant="tonal"
+              >
+                {{ label }}
+              </v-chip>
+            </div>
           </template>
         </v-list-item>
       </v-list>

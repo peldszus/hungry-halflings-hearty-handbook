@@ -48,8 +48,24 @@ const weekDays = computed(() => {
 const recipeSelectItems = computed(() =>
   recipesStore.recipes
     .filter((r) => !r.archived)
-    .map((r) => ({ title: r.name, value: r.id, favourite: r.favourite }))
+    .map((r) => ({
+      title: r.name,
+      value: r.id,
+      favourite: r.favourite,
+      labels: r.labels ?? [],
+    }))
 )
+
+function recipeFilter(
+  _value: string,
+  query: string,
+  item?: { raw: { title: string; labels: string[] } }
+) {
+  const raw = item?.raw
+  if (!raw) return false
+  const q = query.toLowerCase()
+  return raw.title.toLowerCase().includes(q) || raw.labels.some((l) => l.toLowerCase().includes(q))
+}
 
 function usageLines(recipeId: string, referenceDate: string) {
   return formatAssignmentUsageLines(
@@ -114,6 +130,7 @@ function onRecipeChange(date: string, value: string | null) {
           :items="recipeSelectItems"
           item-title="title"
           item-value="value"
+          :custom-filter="recipeFilter"
           placeholder="— No meal —"
           density="compact"
           variant="outlined"
@@ -147,6 +164,17 @@ function onRecipeChange(date: string, value: string | null) {
                   class="last-used text-disabled"
                 >
                   {{ line }}
+                </div>
+                <div v-if="item.labels.length" class="d-flex flex-wrap ga-1 mt-1">
+                  <v-chip
+                    v-for="label in item.labels"
+                    :key="label"
+                    size="x-small"
+                    color="primary"
+                    variant="tonal"
+                  >
+                    {{ label }}
+                  </v-chip>
                 </div>
               </template>
             </v-list-item>

@@ -13,6 +13,7 @@ export interface Recipe {
   id: string
   name: string
   ingredients: Ingredient[]
+  labels?: string[]
   servings: number
   lastEditedAt: string
   archived: boolean
@@ -50,6 +51,17 @@ export const useRecipesStore = defineStore('recipes', () => {
       }
     }
     return [...names].sort((a, b) => a.localeCompare(b))
+  })
+
+  const knownLabels = computed(() => {
+    const labels = new Set<string>()
+    for (const recipe of recipes.value) {
+      for (const label of recipe.labels ?? []) {
+        const name = label.trim()
+        if (name) labels.add(name)
+      }
+    }
+    return [...labels].sort((a, b) => a.localeCompare(b))
   })
 
   const knownUnits = computed(() => {
@@ -134,6 +146,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     recipeCount,
     recentRecipes,
     knownIngredientNames,
+    knownLabels,
     knownUnits,
     unitUsageCounts,
     addRecipe,

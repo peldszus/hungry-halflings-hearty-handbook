@@ -102,6 +102,18 @@ function ingredientLabel(ingredient: Ingredient) {
         <a :href="recipe.url" target="_blank" rel="noopener noreferrer">{{ recipe.url }}</a>
       </p>
 
+      <div v-if="(recipe.labels ?? []).length" class="d-flex flex-wrap ga-2 mb-6">
+        <v-chip
+          v-for="label in recipe.labels"
+          :key="label"
+          size="small"
+          color="primary"
+          variant="tonal"
+        >
+          {{ label }}
+        </v-chip>
+      </div>
+
       <h2 class="text-subtitle-1 font-weight-bold mb-2">Ingredients</h2>
       <v-list v-if="recipe.ingredients.length" lines="two">
         <v-list-item
