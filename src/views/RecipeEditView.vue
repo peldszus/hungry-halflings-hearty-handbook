@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { useRecipesStore, type Ingredient } from '@/stores/recipes'
 
 const route = useRoute()
@@ -48,6 +48,45 @@ const ingredientRows = ref<Ingredient[]>(
     ? existingRecipe.value.ingredients.map((i) => ({ ...i }))
     : [emptyRow()]
 )
+
+function currentSnapshot() {
+  return JSON.stringify({
+    name: name.value,
+    servings: servings.value,
+    url: url.value,
+    labels: labels.value,
+    ingredientRows: ingredientRows.value,
+  })
+}
+
+const initialSnapshot = currentSnapshot()
+const isDirty = computed(() => currentSnapshot() !== initialSnapshot)
+
+const allowLeave = ref(false)
+const showLeaveDialog = ref(false)
+const pendingRoute = ref<string | null>(null)
+
+onBeforeRouteLeave((to) => {
+  if (allowLeave.value || !isDirty.value) return true
+  pendingRoute.value = to.fullPath
+  showLeaveDialog.value = true
+  return false
+})
+
+function confirmLeave() {
+  showLeaveDialog.value = false
+  allowLeave.value = true
+  if (pendingRoute.value) router.push(pendingRoute.value)
+}
+
+function handleBeforeUnload(e: BeforeUnloadEvent) {
+  if (!isDirty.value) return
+  e.preventDefault()
+  e.returnValue = ''
+}
+
+onMounted(() => window.addEventListener('beforeunload', handleBeforeUnload))
+onBeforeUnmount(() => window.removeEventListener('beforeunload', handleBeforeUnload))
 
 const addIngredientBtnRef = ref<{ $el: HTMLElement } | null>(null)
 
@@ -100,6 +139,8 @@ function save() {
     servings: parseInt(servings.value, 10) || 1,
     url: url.value.trim() || undefined,
   }
+
+  allowLeave.value = true
 
   if (isEditMode.value && existingRecipe.value) {
     store.updateRecipe(existingRecipe.value.id, payload)
@@ -248,5 +289,19 @@ function save() {
     </template>
 
     <p v-else class="text-body-2 text-medium-emphasis font-italic">Recipe not found.</p>
+
+    <v-dialog v-model="showLeaveDialog" max-width="400">
+      <v-card>
+        <v-card-title>Unsaved changes</v-card-title>
+        <v-card-text>You have unsaved changes. Leave without saving?</v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="showLeaveDialog = false">Stay</v-btn>
+          <v-btn color="error" variant="text" data-testid="confirm-leave" @click="confirmLeave">
+            Leave
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>

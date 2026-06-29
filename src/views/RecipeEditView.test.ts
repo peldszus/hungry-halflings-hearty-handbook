@@ -1,9 +1,18 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
+import { mount, flushPromises, enableAutoUnmount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHashHistory } from 'vue-router'
+import { afterEach } from 'vitest'
 import RecipeEditView from './RecipeEditView.vue'
 import { useRecipesStore, type Recipe } from '@/stores/recipes'
+
+// Unmount mounted components after each test so component-scoped side effects
+// (beforeunload listeners, teleported dialog DOM) don't leak across tests.
+enableAutoUnmount(afterEach)
+
+// The leave guard (onBeforeRouteLeave) only registers when the component is
+// rendered inside a <router-view>, so these tests mount a host that does.
+const RouterHost = { template: '<router-view />' }
 
 function makeRouter() {
   return createRouter({
@@ -196,6 +205,84 @@ describe('RecipeEditView', () => {
     await wrapper.vm.$nextTick()
 
     expect(wrapper.findAll('.ingredient-row').length).toBe(1)
+  })
+
+  async function mountEditAt(id: string) {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    store.addRecipe({ name: 'Pasta', ingredients: [], servings: 2 })
+    const recipeId = id || store.recipes[0].id
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-edit', params: { id: recipeId } })
+    await router.isReady()
+
+    const wrapper = mount(RouterHost, { global: { plugins: [router, pinia] } })
+    await flushPromises()
+    return { wrapper, router, store }
+  }
+
+  it('navigates away without prompting when the form is unchanged', async () => {
+    const { router } = await mountEditAt('')
+
+    await router.push({ name: 'recipes' })
+    await flushPromises()
+
+    expect(router.currentRoute.value.name).toBe('recipes')
+    expect(document.body.textContent).not.toContain('Unsaved changes')
+  })
+
+  it('blocks navigation and shows a dialog when there are unsaved changes', async () => {
+    const { wrapper, router } = await mountEditAt('')
+    await fieldByTestId(wrapper, 'recipe-name').setValue('Pasta Bolognese')
+
+    await router.push({ name: 'recipes' })
+    await flushPromises()
+
+    expect(router.currentRoute.value.name).toBe('recipe-edit')
+    expect(document.body.textContent).toContain('Unsaved changes')
+  })
+
+  it('navigates away after confirming Leave in the dialog', async () => {
+    const { wrapper, router } = await mountEditAt('')
+    await fieldByTestId(wrapper, 'recipe-name').setValue('Pasta Bolognese')
+
+    await router.push({ name: 'recipes' })
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('recipe-edit')
+
+    const confirmBtn = document.querySelector<HTMLElement>('[data-testid="confirm-leave"]')
+    confirmBtn?.click()
+    await flushPromises()
+    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('recipes'))
+
+    expect(router.currentRoute.value.name).toBe('recipes')
+  })
+
+  it('does not prompt when leaving after a successful save', async () => {
+    const { wrapper, store } = await mountEditAt('')
+    await fieldByTestId(wrapper, 'recipe-name').setValue('Pasta Bolognese')
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    // The edit persisted and navigation away never showed the unsaved-changes dialog.
+    expect(store.recipes[0].name).toBe('Pasta Bolognese')
+    expect(document.body.textContent).not.toContain('Unsaved changes')
+  })
+
+  it('warns on beforeunload only when the form is dirty', async () => {
+    const { wrapper } = await mountEditAt('')
+
+    const pristineEvent = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(pristineEvent)
+    expect(pristineEvent.defaultPrevented).toBe(false)
+
+    await fieldByTestId(wrapper, 'recipe-name').setValue('Pasta Bolognese')
+
+    const dirtyEvent = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(dirtyEvent)
+    expect(dirtyEvent.defaultPrevented).toBe(true)
   })
 
   it('saves ingredient name, quantity, unit and flags', async () => {
