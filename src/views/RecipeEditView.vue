@@ -147,7 +147,11 @@ function save() {
           hide-details="auto"
           class="mb-4"
           data-testid="recipe-labels"
-        />
+        >
+          <template #chip="{ props: chipProps }">
+            <v-chip v-bind="chipProps" color="primary" variant="tonal" />
+          </template>
+        </v-combobox>
 
         <h2 class="text-subtitle-1 font-weight-bold mb-2">Ingredients</h2>
         <template v-for="(row, index) in ingredientRows" :key="index">
