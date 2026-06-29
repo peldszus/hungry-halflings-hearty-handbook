@@ -2,8 +2,10 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHashHistory } from 'vue-router'
+import { VAutocomplete } from 'vuetify/components'
 import MealPlanView from './MealPlanView.vue'
 import { useRecipesStore } from '@/stores/recipes'
+import { useMealPlanStore } from '@/stores/mealPlan'
 
 function makeRouter() {
   return createRouter({
@@ -181,6 +183,91 @@ describe('MealPlanView week navigation', () => {
 
     expect(wrapper.find('i.mdi-pencil').exists()).toBe(true)
     expect(wrapper.find('i.mdi-check').exists()).toBe(false)
+
+    wrapper.unmount()
+  })
+})
+
+describe('MealPlanView recipe assignment', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    setActivePinia(createPinia())
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-17T12:00:00'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('assigns a recipe to a day when one is picked, and unassigns when cleared', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const recipes = useRecipesStore()
+    const mealPlan = useMealPlanStore()
+    const recipe = recipes.addRecipe({ name: 'Stew', ingredients: [], servings: 2 })
+
+    const router = makeRouter()
+    router.push({ name: 'meal-plan' })
+    await router.isReady()
+
+    const wrapper = mount(MealPlanView, { global: { plugins: [router, pinia] } })
+    clickIconButton(wrapper, 'mdi-pencil')
+    await wrapper.vm.$nextTick()
+
+    // The first day of the displayed week is Monday, 2026-06-15.
+    const monday = '2026-06-15'
+    const firstPicker = wrapper.findAllComponents(VAutocomplete)[0]
+
+    firstPicker.vm.$emit('update:model-value', recipe.id)
+    await wrapper.vm.$nextTick()
+    expect(mealPlan.getForDate(monday)?.recipeId).toBe(recipe.id)
+
+    firstPicker.vm.$emit('update:model-value', null)
+    await wrapper.vm.$nextTick()
+    expect(mealPlan.getForDate(monday)).toBeUndefined()
+
+    wrapper.unmount()
+  })
+})
+
+describe('MealPlanView recipe filtering', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    setActivePinia(createPinia())
+  })
+
+  it('matches recipes in the picker by label as well as by title', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const recipes = useRecipesStore()
+    recipes.addRecipe({ name: 'Tagged Curry', ingredients: [], labels: ['spicy'], servings: 2 })
+    recipes.addRecipe({ name: 'Plain Rice', ingredients: [], labels: [], servings: 2 })
+
+    const router = makeRouter()
+    router.push({ name: 'meal-plan' })
+    await router.isReady()
+
+    const wrapper = mount(MealPlanView, {
+      global: { plugins: [router, pinia] },
+      attachTo: document.body,
+    })
+
+    clickIconButton(wrapper, 'mdi-pencil')
+    await wrapper.vm.$nextTick()
+
+    const input = wrapper.find('input')
+    await input.trigger('mousedown')
+    await input.trigger('focus')
+    // "spicy" only appears as a label on Tagged Curry, never in either title,
+    // so the label branch of recipeFilter is what keeps it in the list.
+    await input.setValue('spicy')
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    const items = Array.from(document.querySelectorAll('.v-list-item'))
+    const labels = items.map((item) => item.textContent ?? '')
+    expect(labels.some((t) => t.includes('Tagged Curry'))).toBe(true)
+    expect(labels.some((t) => t.includes('Plain Rice'))).toBe(false)
 
     wrapper.unmount()
   })
