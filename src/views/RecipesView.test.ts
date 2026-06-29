@@ -95,6 +95,8 @@ describe('RecipesView search filtering', () => {
     const allItems = wrapper.findAll('.v-list-item')
     const soup = allItems.find((item) => item.text().includes('Tomato Soup'))
     expect(soup?.find('.v-chip').text()).toBe('vegan')
+    // The chip must live in the content area, not the clamped (overflow-hidden) subtitle.
+    expect(soup?.find('.v-list-item-subtitle .v-chip').exists()).toBe(false)
 
     await wrapper.find('input').setValue('hearty')
     await wrapper.vm.$nextTick()

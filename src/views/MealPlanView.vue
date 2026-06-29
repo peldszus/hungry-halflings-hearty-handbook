@@ -165,18 +165,18 @@ function onRecipeChange(date: string, value: string | null) {
                 >
                   {{ line }}
                 </div>
-                <div v-if="item.labels.length" class="d-flex flex-wrap ga-1 mt-1">
-                  <v-chip
-                    v-for="label in item.labels"
-                    :key="label"
-                    size="x-small"
-                    color="primary"
-                    variant="tonal"
-                  >
-                    {{ label }}
-                  </v-chip>
-                </div>
               </template>
+              <div v-if="item.labels.length" class="d-flex flex-wrap ga-1 mt-1">
+                <v-chip
+                  v-for="label in item.labels"
+                  :key="label"
+                  size="x-small"
+                  color="primary"
+                  variant="tonal"
+                >
+                  {{ label }}
+                </v-chip>
+              </div>
             </v-list-item>
           </template>
         </v-autocomplete>

@@ -82,18 +82,18 @@ function lastUsedLabel(recipeId: string) {
           </template>
           <template #subtitle>
             <span class="last-used text-disabled">{{ lastUsedLabel(recipe.id) }}</span>
-            <div v-if="(recipe.labels ?? []).length" class="d-flex flex-wrap ga-1 mt-1">
-              <v-chip
-                v-for="label in recipe.labels"
-                :key="label"
-                size="x-small"
-                color="primary"
-                variant="tonal"
-              >
-                {{ label }}
-              </v-chip>
-            </div>
           </template>
+          <div v-if="(recipe.labels ?? []).length" class="d-flex flex-wrap ga-1 mt-1">
+            <v-chip
+              v-for="label in recipe.labels"
+              :key="label"
+              size="x-small"
+              color="primary"
+              variant="tonal"
+            >
+              {{ label }}
+            </v-chip>
+          </div>
         </v-list-item>
       </v-list>
     </v-card>

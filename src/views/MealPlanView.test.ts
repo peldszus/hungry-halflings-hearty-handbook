@@ -88,6 +88,8 @@ describe('MealPlanView recipe labels', () => {
     const items = Array.from(document.querySelectorAll('.v-list-item'))
     const curryItem = items.find((item) => item.textContent?.includes('Tagged Curry'))
     expect(curryItem?.querySelector('.v-chip')?.textContent).toContain('spicy')
+    // The chip must live in the content area, not the clamped (overflow-hidden) subtitle.
+    expect(curryItem?.querySelector('.v-list-item-subtitle .v-chip')).toBeNull()
 
     wrapper.unmount()
   })
