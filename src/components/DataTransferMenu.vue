@@ -30,7 +30,7 @@ const currentStats = computed<DatabaseStats>(() =>
 function formatDate(value: string | undefined): string {
   if (!value) return '—'
   const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString()
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString()
 }
 
 function exportData() {
@@ -132,37 +132,37 @@ defineExpose({
 
         <template v-if="fileStats">
           <v-alert type="warning" variant="tonal" class="mb-4">
-            Importing replaces your entire database. This cannot be undone.
+            Importing irreversibly replaces your entire database.
           </v-alert>
 
           <v-table density="compact" data-testid="import-preview">
             <thead>
               <tr>
                 <th></th>
-                <th class="text-right">In file</th>
                 <th class="text-right">Current</th>
+                <th class="text-right">In file</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td>Recipes</td>
-                <td class="text-right">{{ fileStats.recipeCount }}</td>
                 <td class="text-right">{{ currentStats.recipeCount }}</td>
+                <td class="text-right">{{ fileStats.recipeCount }}</td>
               </tr>
               <tr>
                 <td>Planned meals</td>
-                <td class="text-right">{{ fileStats.plannedMealCount }}</td>
                 <td class="text-right">{{ currentStats.plannedMealCount }}</td>
+                <td class="text-right">{{ fileStats.plannedMealCount }}</td>
               </tr>
               <tr>
                 <td>Last planned meal</td>
-                <td class="text-right">{{ formatDate(fileStats.lastMealDate) }}</td>
                 <td class="text-right">{{ formatDate(currentStats.lastMealDate) }}</td>
+                <td class="text-right">{{ formatDate(fileStats.lastMealDate) }}</td>
               </tr>
               <tr>
                 <td>Exported</td>
-                <td class="text-right">{{ formatDate(parsedBackup?.exportedAt) }}</td>
                 <td class="text-right">—</td>
+                <td class="text-right">{{ formatDate(parsedBackup?.exportedAt) }}</td>
               </tr>
             </tbody>
           </v-table>
