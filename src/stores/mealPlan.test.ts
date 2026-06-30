@@ -140,4 +140,16 @@ describe('mealPlan store', () => {
       expect(store.getNextPlannedDate('recipe-1', '2026-06-14')).toBe('2026-06-16')
     })
   })
+
+  describe('replaceAll', () => {
+    it('replaces all entries and persists them', () => {
+      const store = useMealPlanStore()
+      store.assign('2026-06-14', 'recipe-1')
+      store.replaceAll([{ date: '2026-07-01', recipeId: 'recipe-9' }])
+      expect(store.entries).toHaveLength(1)
+      expect(store.getForDate('2026-07-01')?.recipeId).toBe('recipe-9')
+      const saved = JSON.parse(localStorage.getItem('mealPlan') ?? '[]')
+      expect(saved).toEqual([{ date: '2026-07-01', recipeId: 'recipe-9' }])
+    })
+  })
 })

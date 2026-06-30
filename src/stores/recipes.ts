@@ -141,6 +141,11 @@ export const useRecipesStore = defineStore('recipes', () => {
     save(recipes.value)
   }
 
+  function replaceAll(next: Recipe[]) {
+    recipes.value = next
+    save(recipes.value)
+  }
+
   return {
     recipes,
     recipeCount,
@@ -156,5 +161,6 @@ export const useRecipesStore = defineStore('recipes', () => {
     archiveRecipe,
     unarchiveRecipe,
     toggleFavourite,
+    replaceAll,
   }
 })

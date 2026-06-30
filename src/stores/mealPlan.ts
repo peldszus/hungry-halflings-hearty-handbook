@@ -60,10 +60,16 @@ export const useMealPlanStore = defineStore('mealPlan', () => {
     return dates.length ? dates.sort()[0] : undefined
   }
 
+  function replaceAll(next: MealPlanEntry[]) {
+    entries.value = next
+    save(entries.value)
+  }
+
   return {
     entries,
     assign,
     unassign,
+    replaceAll,
     getForDate,
     getForRange,
     getLastUsedDate,

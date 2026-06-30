@@ -298,4 +298,23 @@ describe('recipes store', () => {
     expect(store.unitUsageCounts.get('ml')).toBe(1)
     expect(store.unitUsageCounts.has('kg')).toBe(false)
   })
+
+  it('replaces all recipes and persists them with replaceAll', () => {
+    const store = useRecipesStore()
+    store.addRecipe({ name: 'Old', ingredients: [ing('flour')], servings: 1 })
+    const replacement: Recipe = {
+      id: 'imported-1',
+      name: 'Imported',
+      ingredients: [ing('rice')],
+      servings: 4,
+      lastEditedAt: '2026-01-01T00:00:00.000Z',
+      archived: false,
+      favourite: true,
+    }
+    store.replaceAll([replacement])
+    expect(store.recipes).toHaveLength(1)
+    expect(store.recipes[0]).toEqual(replacement)
+    const saved = JSON.parse(localStorage.getItem('recipes') ?? '[]')
+    expect(saved).toEqual([replacement])
+  })
 })
