@@ -55,35 +55,56 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
-function isValidIngredient(value: unknown): value is Ingredient {
-  if (!isRecord(value)) return false
-  if (typeof value.ingredient !== 'string') return false
-  if (typeof value.isMain !== 'boolean') return false
-  if (typeof value.addToShoppingList !== 'boolean') return false
-  if (value.quantity !== undefined && typeof value.quantity !== 'number') return false
-  if (value.unit !== undefined && typeof value.unit !== 'string') return false
-  return true
+// The recipe model gained fields over time (structured ingredients, lastEditedAt,
+// archived/url, favourite) without a localStorage migration, so data saved by
+// earlier versions can be missing them. The running app tolerates that, so the
+// importer must too: reject only fundamentally broken records and fill defaults
+// for the optional/added-later fields, healing the data on import.
+
+// Returns the normalized ingredient, or null if it is too broken to keep.
+function normalizeIngredient(value: unknown): Ingredient | null {
+  if (!isRecord(value)) return null
+  if (typeof value.ingredient !== 'string') return null
+  const ingredient: Ingredient = {
+    ingredient: value.ingredient,
+    isMain: typeof value.isMain === 'boolean' ? value.isMain : false,
+    addToShoppingList:
+      typeof value.addToShoppingList === 'boolean' ? value.addToShoppingList : true,
+  }
+  if (typeof value.quantity === 'number') ingredient.quantity = value.quantity
+  if (typeof value.unit === 'string') ingredient.unit = value.unit
+  return ingredient
 }
 
-function isValidRecipe(value: unknown): value is Recipe {
-  if (!isRecord(value)) return false
-  if (typeof value.id !== 'string') return false
-  if (typeof value.name !== 'string') return false
-  if (typeof value.servings !== 'number') return false
-  if (typeof value.lastEditedAt !== 'string') return false
-  if (typeof value.archived !== 'boolean') return false
-  if (typeof value.favourite !== 'boolean') return false
-  if (!Array.isArray(value.ingredients) || !value.ingredients.every(isValidIngredient)) {
-    return false
+// Returns the normalized recipe, or null if it is too broken to keep.
+function normalizeRecipe(value: unknown): Recipe | null {
+  if (!isRecord(value)) return null
+  if (typeof value.id !== 'string') return null
+  if (typeof value.name !== 'string') return null
+  if (!Array.isArray(value.ingredients)) return null
+
+  const ingredients: Ingredient[] = []
+  for (const raw of value.ingredients) {
+    const ingredient = normalizeIngredient(raw)
+    if (!ingredient) return null
+    ingredients.push(ingredient)
   }
-  if (
-    value.labels !== undefined &&
-    (!Array.isArray(value.labels) || !value.labels.every((l) => typeof l === 'string'))
-  ) {
-    return false
+
+  const recipe: Recipe = {
+    id: value.id,
+    name: value.name,
+    ingredients,
+    servings: typeof value.servings === 'number' ? value.servings : 1,
+    lastEditedAt:
+      typeof value.lastEditedAt === 'string' ? value.lastEditedAt : new Date(0).toISOString(),
+    archived: typeof value.archived === 'boolean' ? value.archived : false,
+    favourite: typeof value.favourite === 'boolean' ? value.favourite : false,
   }
-  if (value.url !== undefined && typeof value.url !== 'string') return false
-  return true
+  if (Array.isArray(value.labels)) {
+    recipe.labels = value.labels.filter((l): l is string => typeof l === 'string')
+  }
+  if (typeof value.url === 'string') recipe.url = value.url
+  return recipe
 }
 
 function isValidMealPlanEntry(value: unknown): value is MealPlanEntry {
@@ -113,8 +134,14 @@ export function parseBackup(text: string): ParseResult {
   if (typeof parsed.exportedAt !== 'string') {
     return { error: 'The backup is missing its export date.' }
   }
-  if (!Array.isArray(parsed.recipes) || !parsed.recipes.every(isValidRecipe)) {
+  if (!Array.isArray(parsed.recipes)) {
     return { error: 'The backup contains invalid recipe data.' }
+  }
+  const recipes: Recipe[] = []
+  for (const raw of parsed.recipes) {
+    const recipe = normalizeRecipe(raw)
+    if (!recipe) return { error: 'The backup contains invalid recipe data.' }
+    recipes.push(recipe)
   }
   if (!Array.isArray(parsed.mealPlan) || !parsed.mealPlan.every(isValidMealPlanEntry)) {
     return { error: 'The backup contains invalid meal plan data.' }
@@ -125,7 +152,7 @@ export function parseBackup(text: string): ParseResult {
       app: parsed.app,
       version: parsed.version,
       exportedAt: parsed.exportedAt,
-      recipes: parsed.recipes,
+      recipes,
       mealPlan: parsed.mealPlan,
     },
   }

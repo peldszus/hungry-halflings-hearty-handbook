@@ -93,24 +93,22 @@ describe('parseBackup', () => {
     expect(parseBackup(JSON.stringify(backup))).toHaveProperty('error')
   })
 
-  it('rejects a recipe with a missing field', () => {
+  it('rejects a recipe that is not an object', () => {
+    const json = JSON.stringify(buildBackup(['nope' as unknown as Recipe], []))
+    expect(parseBackup(json)).toHaveProperty('error')
+  })
+
+  it('rejects a recipe missing its id', () => {
     const broken = recipe() as unknown as Record<string, unknown>
-    delete broken.servings
+    delete broken.id
     const json = JSON.stringify(buildBackup([broken as unknown as Recipe], []))
     expect(parseBackup(json)).toHaveProperty('error')
   })
 
-  it('rejects a recipe with a wrong field type', () => {
-    const json = JSON.stringify(
-      buildBackup([recipe({ archived: 'yes' as unknown as boolean })], [])
-    )
-    expect(parseBackup(json)).toHaveProperty('error')
-  })
-
-  it('rejects an invalid ingredient', () => {
+  it('rejects an ingredient whose name is not a string', () => {
     const json = JSON.stringify(
       buildBackup(
-        [recipe({ ingredients: [{ ingredient: 'x' } as unknown as Recipe['ingredients'][0]] })],
+        [recipe({ ingredients: [{ isMain: true } as unknown as Recipe['ingredients'][0]] })],
         []
       )
     )
@@ -129,6 +127,47 @@ describe('parseBackup', () => {
       buildBackup([recipe({ labels: ['dinner'], url: 'http://example.com' })], [])
     )
     expect(parseBackup(json)).toHaveProperty('data')
+  })
+
+  it('defaults a missing servings to 1', () => {
+    const broken = recipe() as unknown as Record<string, unknown>
+    delete broken.servings
+    const result = parseBackup(JSON.stringify(buildBackup([broken as unknown as Recipe], [])))
+    expect('data' in result).toBe(true)
+    if ('data' in result) expect(result.data.recipes[0].servings).toBe(1)
+  })
+
+  it('coerces a wrong-typed boolean field to its default', () => {
+    const result = parseBackup(
+      JSON.stringify(buildBackup([recipe({ archived: 'yes' as unknown as boolean })], []))
+    )
+    expect('data' in result).toBe(true)
+    if ('data' in result) expect(result.data.recipes[0].archived).toBe(false)
+  })
+
+  it('imports a legacy recipe missing added-later fields, filling defaults', () => {
+    const legacy = {
+      id: 'legacy-1',
+      name: 'Old Stew',
+      servings: 3,
+      ingredients: [{ ingredient: 'beef' }, { ingredient: 'carrot', addToShoppingList: false }],
+      // no lastEditedAt, archived, favourite, url or labels
+    }
+    const result = parseBackup(JSON.stringify(buildBackup([legacy as unknown as Recipe], [])))
+    expect('data' in result).toBe(true)
+    if ('data' in result) {
+      const imported = result.data.recipes[0]
+      expect(imported.archived).toBe(false)
+      expect(imported.favourite).toBe(false)
+      expect(typeof imported.lastEditedAt).toBe('string')
+      expect(imported.url).toBeUndefined()
+      expect(imported.ingredients[0]).toEqual({
+        ingredient: 'beef',
+        isMain: false,
+        addToShoppingList: true,
+      })
+      expect(imported.ingredients[1].addToShoppingList).toBe(false)
+    }
   })
 })
 
