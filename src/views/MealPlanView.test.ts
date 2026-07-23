@@ -3,9 +3,14 @@ import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { VAutocomplete } from 'vuetify/components'
+import { mdiPencil, mdiStar, mdiChevronLeft, mdiChevronRight, mdiCheck } from '@mdi/js'
 import MealPlanView from './MealPlanView.vue'
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
+
+function iconSelector(path: string) {
+  return `svg path[d="${path}"]`
+}
 
 function makeRouter() {
   return createRouter({
@@ -40,7 +45,10 @@ describe('MealPlanView favourite indicator', () => {
       attachTo: document.body,
     })
 
-    wrapper.find('i.mdi-pencil').element.closest('button')?.dispatchEvent(new Event('click'))
+    wrapper
+      .find(iconSelector(mdiPencil))
+      .element.closest('button')
+      ?.dispatchEvent(new Event('click'))
     await wrapper.vm.$nextTick()
 
     const input = wrapper.find('input')
@@ -51,8 +59,8 @@ describe('MealPlanView favourite indicator', () => {
     const items = Array.from(document.querySelectorAll('.v-list-item'))
     const favouriteItem = items.find((item) => item.textContent?.includes('Favourite Curry'))
     const plainItem = items.find((item) => item.textContent?.includes('Plain Rice'))
-    expect(favouriteItem?.querySelector('i.mdi-star')).not.toBeNull()
-    expect(plainItem?.querySelector('i.mdi-star')).toBeNull()
+    expect(favouriteItem?.querySelector(iconSelector(mdiStar))).not.toBeNull()
+    expect(plainItem?.querySelector(iconSelector(mdiStar))).toBeNull()
 
     wrapper.unmount()
   })
@@ -79,7 +87,10 @@ describe('MealPlanView recipe labels', () => {
       attachTo: document.body,
     })
 
-    wrapper.find('i.mdi-pencil').element.closest('button')?.dispatchEvent(new Event('click'))
+    wrapper
+      .find(iconSelector(mdiPencil))
+      .element.closest('button')
+      ?.dispatchEvent(new Event('click'))
     await wrapper.vm.$nextTick()
 
     const input = wrapper.find('input')
@@ -97,8 +108,8 @@ describe('MealPlanView recipe labels', () => {
   })
 })
 
-function clickIconButton(wrapper: ReturnType<typeof mount>, iconClass: string) {
-  wrapper.find(`i.${iconClass}`).element.closest('button')?.dispatchEvent(new Event('click'))
+function clickIconButton(wrapper: ReturnType<typeof mount>, iconPath: string) {
+  wrapper.find(iconSelector(iconPath)).element.closest('button')?.dispatchEvent(new Event('click'))
 }
 
 describe('MealPlanView week navigation', () => {
@@ -140,7 +151,7 @@ describe('MealPlanView week navigation', () => {
     await router.isReady()
 
     const wrapper = mount(MealPlanView, { global: { plugins: [router, pinia] } })
-    clickIconButton(wrapper, 'mdi-chevron-right')
+    clickIconButton(wrapper, mdiChevronRight)
     await wrapper.vm.$nextTick()
 
     expect(wrapper.text()).toContain('Jun 22, 2026')
@@ -157,7 +168,7 @@ describe('MealPlanView week navigation', () => {
     await router.isReady()
 
     const wrapper = mount(MealPlanView, { global: { plugins: [router, pinia] } })
-    clickIconButton(wrapper, 'mdi-chevron-left')
+    clickIconButton(wrapper, mdiChevronLeft)
     await wrapper.vm.$nextTick()
 
     expect(wrapper.text()).toContain('Jun 8, 2026')
@@ -174,15 +185,15 @@ describe('MealPlanView week navigation', () => {
     await router.isReady()
 
     const wrapper = mount(MealPlanView, { global: { plugins: [router, pinia] } })
-    clickIconButton(wrapper, 'mdi-pencil')
+    clickIconButton(wrapper, mdiPencil)
     await wrapper.vm.$nextTick()
-    expect(wrapper.find('i.mdi-check').exists()).toBe(true)
+    expect(wrapper.find(iconSelector(mdiCheck)).exists()).toBe(true)
 
-    clickIconButton(wrapper, 'mdi-chevron-right')
+    clickIconButton(wrapper, mdiChevronRight)
     await wrapper.vm.$nextTick()
 
-    expect(wrapper.find('i.mdi-pencil').exists()).toBe(true)
-    expect(wrapper.find('i.mdi-check').exists()).toBe(false)
+    expect(wrapper.find(iconSelector(mdiPencil)).exists()).toBe(true)
+    expect(wrapper.find(iconSelector(mdiCheck)).exists()).toBe(false)
 
     wrapper.unmount()
   })
@@ -212,7 +223,7 @@ describe('MealPlanView recipe assignment', () => {
     await router.isReady()
 
     const wrapper = mount(MealPlanView, { global: { plugins: [router, pinia] } })
-    clickIconButton(wrapper, 'mdi-pencil')
+    clickIconButton(wrapper, mdiPencil)
     await wrapper.vm.$nextTick()
 
     // The first day of the displayed week is Monday, 2026-06-15.
@@ -253,7 +264,7 @@ describe('MealPlanView recipe filtering', () => {
       attachTo: document.body,
     })
 
-    clickIconButton(wrapper, 'mdi-pencil')
+    clickIconButton(wrapper, mdiPencil)
     await wrapper.vm.$nextTick()
 
     const input = wrapper.find('input')

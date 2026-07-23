@@ -2,9 +2,12 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHashHistory } from 'vue-router'
+import { mdiStar } from '@mdi/js'
 import RecipesView from './RecipesView.vue'
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
+
+const starSelector = `svg path[d="${mdiStar}"]`
 
 function makeRouter() {
   return createRouter({
@@ -41,15 +44,15 @@ describe('RecipesView favourite indicator', () => {
     expect(listItems).toHaveLength(2)
     const favouriteItem = listItems.find((item) => item.text().includes('Favourite Soup'))
     const plainItem = listItems.find((item) => item.text().includes('Plain Stew'))
-    expect(favouriteItem?.find('i.mdi-star').exists()).toBe(true)
-    expect(plainItem?.find('i.mdi-star').exists()).toBe(false)
+    expect(favouriteItem?.find(starSelector).exists()).toBe(true)
+    expect(plainItem?.find(starSelector).exists()).toBe(false)
 
     await wrapper.find('input').setValue('Favourite')
     await wrapper.vm.$nextTick()
 
     const filteredItems = wrapper.findAll('.v-list-item')
     expect(filteredItems).toHaveLength(1)
-    expect(filteredItems[0].find('i.mdi-star').exists()).toBe(true)
+    expect(filteredItems[0].find(starSelector).exists()).toBe(true)
   })
 })
 

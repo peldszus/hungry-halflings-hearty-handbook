@@ -1,7 +1,16 @@
 import { config } from '@vue/test-utils'
 import { createVuetify } from 'vuetify'
+import { aliases, mdi } from 'vuetify/iconsets/mdi-svg'
 
-config.global.plugins = [createVuetify()]
+config.global.plugins = [
+  createVuetify({
+    icons: {
+      defaultSet: 'mdi',
+      aliases,
+      sets: { mdi },
+    },
+  }),
+]
 
 // jsdom doesn't implement visualViewport or ResizeObserver, which Vuetify's
 // overlay positioning (menus, autocompletes) relies on.

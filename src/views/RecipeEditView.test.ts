@@ -3,6 +3,7 @@ import { mount, flushPromises, enableAutoUnmount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { afterEach } from 'vitest'
+import { mdiDelete } from '@mdi/js'
 import RecipeEditView from './RecipeEditView.vue'
 import { useRecipesStore, type Recipe } from '@/stores/recipes'
 
@@ -200,7 +201,7 @@ describe('RecipeEditView', () => {
 
     expect(wrapper.findAll('.ingredient-row').length).toBe(2)
 
-    const deleteButtons = wrapper.findAll('i.mdi-delete')
+    const deleteButtons = wrapper.findAll(`svg path[d="${mdiDelete}"]`)
     await deleteButtons[0].element.closest('button')?.dispatchEvent(new Event('click'))
     await wrapper.vm.$nextTick()
 

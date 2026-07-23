@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
+import { mdiArrowLeft, mdiDelete, mdiPlus } from '@mdi/js'
 import { useRecipesStore, type Ingredient } from '@/stores/recipes'
 
 const route = useRoute()
@@ -158,7 +159,7 @@ function save() {
 
 <template>
   <v-container>
-    <v-btn variant="text" prepend-icon="mdi-arrow-left" class="mb-4 px-0" @click="router.back()">
+    <v-btn variant="text" :prepend-icon="mdiArrowLeft" class="mb-4 px-0" @click="router.back()">
       Back
     </v-btn>
 
@@ -250,7 +251,7 @@ function save() {
               />
               <v-spacer />
               <v-btn
-                icon="mdi-delete"
+                :icon="mdiDelete"
                 size="x-small"
                 variant="text"
                 color="error"
@@ -263,7 +264,7 @@ function save() {
         <v-btn
           ref="addIngredientBtnRef"
           variant="tonal"
-          prepend-icon="mdi-plus"
+          :prepend-icon="mdiPlus"
           class="mb-4"
           @click="addIngredientRow"
         >

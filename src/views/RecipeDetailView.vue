@@ -1,6 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import {
+  mdiArrowLeft,
+  mdiPencil,
+  mdiStar,
+  mdiStarOutline,
+  mdiArchiveArrowUp,
+  mdiArchiveArrowDown,
+  mdiDelete,
+  mdiCircleSmall,
+  mdiCart,
+} from '@mdi/js'
 import { useRecipesStore, type Ingredient } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
 import { formatRelativeTime } from '@/utils/relativeTime'
@@ -60,7 +71,7 @@ function ingredientLabel(ingredient: Ingredient) {
 
 <template>
   <v-container>
-    <v-btn variant="text" prepend-icon="mdi-arrow-left" class="mb-4 px-0" @click="router.back()">
+    <v-btn variant="text" :prepend-icon="mdiArrowLeft" class="mb-4 px-0" @click="router.back()">
       Back
     </v-btn>
 
@@ -71,23 +82,23 @@ function ingredientLabel(ingredient: Ingredient) {
       </div>
       <div class="d-flex ga-2 mb-4">
         <v-btn
-          icon="mdi-pencil"
+          :icon="mdiPencil"
           variant="tonal"
           @click="router.push({ name: 'recipe-edit', params: { id: recipe.id } })"
         />
         <v-btn
-          :icon="recipe.favourite ? 'mdi-star' : 'mdi-star-outline'"
+          :icon="recipe.favourite ? mdiStar : mdiStarOutline"
           variant="tonal"
           :color="recipe.favourite ? 'yellow-darken-2' : undefined"
           @click="toggleFavourite"
         />
         <v-btn
-          :icon="recipe.archived ? 'mdi-archive-arrow-up' : 'mdi-archive-arrow-down'"
+          :icon="recipe.archived ? mdiArchiveArrowUp : mdiArchiveArrowDown"
           variant="tonal"
           :color="recipe.archived ? 'primary' : undefined"
           @click="toggleArchive"
         />
-        <v-btn icon="mdi-delete" variant="tonal" color="error" @click="deleteRecipe" />
+        <v-btn :icon="mdiDelete" variant="tonal" color="error" @click="deleteRecipe" />
       </div>
       <p class="text-body-2 text-medium-emphasis mb-2">
         {{ recipe.servings }} servings · Last edited
@@ -119,7 +130,7 @@ function ingredientLabel(ingredient: Ingredient) {
         <v-list-item
           v-for="(ingredient, index) in recipe.ingredients"
           :key="index"
-          prepend-icon="mdi-circle-small"
+          :prepend-icon="mdiCircleSmall"
         >
           <v-list-item-title>
             {{ ingredientLabel(ingredient) }}
@@ -137,7 +148,7 @@ function ingredientLabel(ingredient: Ingredient) {
               size="x-small"
               color="secondary"
               variant="tonal"
-              prepend-icon="mdi-cart"
+              :prepend-icon="mdiCart"
               class="ml-2 px-2"
             />
           </v-list-item-title>
