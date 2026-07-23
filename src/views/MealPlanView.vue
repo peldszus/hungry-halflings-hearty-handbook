@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { mdiChevronLeft, mdiChevronRight, mdiCheck, mdiPencil, mdiStar } from '@mdi/js'
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
 import { highlightInfixMatches } from '@/utils/highlight'
@@ -89,13 +90,13 @@ function onRecipeChange(date: string, value: string | null) {
     <h1 class="text-h6 text-primary mb-2">Meal Plan</h1>
 
     <div class="d-flex align-center mb-3 gap-2">
-      <v-btn icon="mdi-chevron-left" variant="tonal" size="small" @click="weekOffset--" />
+      <v-btn :icon="mdiChevronLeft" variant="tonal" size="small" @click="weekOffset--" />
       <span class="text-body-2 flex-grow-1 text-center">
         {{ weekDays[0].dateWithYear }} – {{ weekDays[6].dateWithYear }}
       </span>
-      <v-btn icon="mdi-chevron-right" variant="tonal" size="small" @click="weekOffset++" />
+      <v-btn :icon="mdiChevronRight" variant="tonal" size="small" @click="weekOffset++" />
       <v-btn
-        :icon="editMode ? 'mdi-check' : 'mdi-pencil'"
+        :icon="editMode ? mdiCheck : mdiPencil"
         class="ml-2"
         :color="editMode ? 'primary' : undefined"
         variant="tonal"
@@ -151,7 +152,7 @@ function onRecipeChange(date: string, value: string | null) {
                 >
                 <v-icon
                   v-if="item.favourite"
-                  icon="mdi-star"
+                  :icon="mdiStar"
                   color="yellow-darken-2"
                   size="small"
                   class="ml-2"

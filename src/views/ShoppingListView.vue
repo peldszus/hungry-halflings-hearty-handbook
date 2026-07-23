@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { mdiCheckboxBlankCircleOutline } from '@mdi/js'
 import { useShoppingListStore, type ShoppingListItem } from '@/stores/shoppingList'
 
 const store = useShoppingListStore()
@@ -39,7 +40,7 @@ function itemLabel(item: ShoppingListItem) {
         <v-list-item
           v-for="item in store.items"
           :key="`${item.ingredient}::${item.unit ?? ''}`"
-          prepend-icon="mdi-checkbox-blank-circle-outline"
+          :prepend-icon="mdiCheckboxBlankCircleOutline"
         >
           <v-list-item-title>{{ itemLabel(item) }}</v-list-item-title>
         </v-list-item>

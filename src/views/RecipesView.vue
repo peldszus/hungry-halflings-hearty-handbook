@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { mdiMagnify, mdiStar, mdiPlus } from '@mdi/js'
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
 import { highlightInfixMatches } from '@/utils/highlight'
@@ -39,7 +40,7 @@ function lastUsedLabel(recipeId: string) {
       v-model="searchText"
       label="Search recipes"
       placeholder="Search by name"
-      prepend-inner-icon="mdi-magnify"
+      :prepend-inner-icon="mdiMagnify"
       density="compact"
       variant="outlined"
       clearable
@@ -71,7 +72,7 @@ function lastUsedLabel(recipeId: string) {
             >
             <v-icon
               v-if="recipe.favourite"
-              icon="mdi-star"
+              :icon="mdiStar"
               color="yellow-darken-2"
               size="small"
               class="ml-2"
@@ -99,7 +100,7 @@ function lastUsedLabel(recipeId: string) {
     </v-card>
 
     <v-btn
-      icon="mdi-plus"
+      :icon="mdiPlus"
       color="primary"
       class="fab"
       size="large"

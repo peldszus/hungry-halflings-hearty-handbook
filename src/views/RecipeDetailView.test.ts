@@ -2,9 +2,21 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHashHistory } from 'vue-router'
+import {
+  mdiStar,
+  mdiStarOutline,
+  mdiDelete,
+  mdiArchiveArrowDown,
+  mdiArchiveArrowUp,
+  mdiCart,
+} from '@mdi/js'
 import RecipeDetailView from './RecipeDetailView.vue'
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
+
+function iconSelector(path: string) {
+  return `svg path[d="${path}"]`
+}
 
 function makeRouter() {
   return createRouter({
@@ -42,16 +54,18 @@ describe('RecipeDetailView favourite button', () => {
     const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
 
     function starButton() {
-      return wrapper.find('i.mdi-star, i.mdi-star-outline').element.closest('button')
+      return wrapper
+        .find(`${iconSelector(mdiStar)}, ${iconSelector(mdiStarOutline)}`)
+        .element.closest('button')
     }
 
-    expect(wrapper.find('i.mdi-star-outline').exists()).toBe(true)
+    expect(wrapper.find(iconSelector(mdiStarOutline)).exists()).toBe(true)
 
     await starButton()?.dispatchEvent(new Event('click'))
     await wrapper.vm.$nextTick()
 
     expect(store.getById(id)?.favourite).toBe(true)
-    expect(wrapper.find('i.mdi-star').exists()).toBe(true)
+    expect(wrapper.find(iconSelector(mdiStar)).exists()).toBe(true)
     expect(store.getById(id)?.lastEditedAt).toBe(originalEditedAt)
 
     await starButton()?.dispatchEvent(new Event('click'))
@@ -62,8 +76,8 @@ describe('RecipeDetailView favourite button', () => {
   })
 })
 
-function iconButton(wrapper: ReturnType<typeof mount>, iconClass: string) {
-  return wrapper.find(`i.${iconClass}`).element.closest('button')
+function iconButton(wrapper: ReturnType<typeof mount>, iconPath: string) {
+  return wrapper.find(iconSelector(iconPath)).element.closest('button')
 }
 
 describe('RecipeDetailView labels', () => {
@@ -132,7 +146,7 @@ describe('RecipeDetailView actions', () => {
     await router.isReady()
 
     const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
-    iconButton(wrapper, 'mdi-delete')?.dispatchEvent(new Event('click'))
+    iconButton(wrapper, mdiDelete)?.dispatchEvent(new Event('click'))
     await flushPromises()
 
     expect(store.getById(id)).toBeUndefined()
@@ -156,19 +170,19 @@ describe('RecipeDetailView actions', () => {
 
     const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
 
-    expect(wrapper.find('i.mdi-archive-arrow-down').exists()).toBe(true)
-    iconButton(wrapper, 'mdi-archive-arrow-down')?.dispatchEvent(new Event('click'))
+    expect(wrapper.find(iconSelector(mdiArchiveArrowDown)).exists()).toBe(true)
+    iconButton(wrapper, mdiArchiveArrowDown)?.dispatchEvent(new Event('click'))
     await wrapper.vm.$nextTick()
 
     expect(store.getById(id)?.archived).toBe(true)
     expect(wrapper.text()).toContain('Archived')
-    expect(wrapper.find('i.mdi-archive-arrow-up').exists()).toBe(true)
+    expect(wrapper.find(iconSelector(mdiArchiveArrowUp)).exists()).toBe(true)
 
-    iconButton(wrapper, 'mdi-archive-arrow-up')?.dispatchEvent(new Event('click'))
+    iconButton(wrapper, mdiArchiveArrowUp)?.dispatchEvent(new Event('click'))
     await wrapper.vm.$nextTick()
 
     expect(store.getById(id)?.archived).toBe(false)
-    expect(wrapper.find('i.mdi-archive-arrow-down').exists()).toBe(true)
+    expect(wrapper.find(iconSelector(mdiArchiveArrowDown)).exists()).toBe(true)
   })
 
   it('renders an empty-ingredients message when there are none', async () => {
@@ -285,8 +299,8 @@ describe('RecipeDetailView actions', () => {
     const items = wrapper.findAll('.v-list-item')
     const salt = items.find((item) => item.text().includes('salt'))
     const pork = items.find((item) => item.text().includes('pork'))
-    expect(salt?.find('.mdi-cart').exists()).toBe(false)
-    expect(pork?.find('.mdi-cart').exists()).toBe(true)
+    expect(salt?.find(iconSelector(mdiCart)).exists()).toBe(false)
+    expect(pork?.find(iconSelector(mdiCart)).exists()).toBe(true)
   })
 
   it('renders the recipe URL as a link when provided', async () => {

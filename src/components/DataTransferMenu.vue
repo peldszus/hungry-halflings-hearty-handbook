@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { mdiDotsVertical, mdiDownload, mdiUpload, mdiPaperclip } from '@mdi/js'
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
 import {
@@ -89,17 +90,17 @@ defineExpose({
 <template>
   <v-menu>
     <template #activator="{ props }">
-      <v-btn icon="mdi-dots-vertical" v-bind="props" aria-label="Data menu" />
+      <v-btn :icon="mdiDotsVertical" v-bind="props" aria-label="Data menu" />
     </template>
     <v-list>
       <v-list-item
-        prepend-icon="mdi-download"
+        :prepend-icon="mdiDownload"
         title="Export data"
         data-testid="export-data"
         @click="exportData"
       />
       <v-list-item
-        prepend-icon="mdi-upload"
+        :prepend-icon="mdiUpload"
         title="Import data"
         data-testid="import-data"
         @click="openImportDialog"
@@ -114,7 +115,7 @@ defineExpose({
         <v-file-input
           label="Select backup file"
           accept=".json,application/json"
-          prepend-icon="mdi-paperclip"
+          :prepend-icon="mdiPaperclip"
           density="compact"
           variant="outlined"
           :model-value="selectedFile"
