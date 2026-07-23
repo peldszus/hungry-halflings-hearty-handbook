@@ -259,7 +259,7 @@ describe('MealPlanView day and meal notes', () => {
     vi.useRealTimers()
   })
 
-  it('shows placeholder text for empty notes', async () => {
+  it('shows no placeholder text and a dimmed icon for empty notes', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const router = makeRouter()
@@ -269,10 +269,12 @@ describe('MealPlanView day and meal notes', () => {
     const wrapper = mount(MealPlanView, { global: { plugins: [router, pinia] } })
     const firstRow = wrapper.findAll('.meal-plan-row')[0]
     const noteTexts = firstRow.findAll('.note-text')
+    const noteIcons = firstRow.findAll('.note-icon')
 
-    expect(noteTexts[0].text()).toBe('Day note')
-    expect(noteTexts[1].text()).toBe('Meal note')
-    expect(noteTexts[0].classes()).toContain('note-empty')
+    expect(noteTexts[0].text()).toBe('')
+    expect(noteTexts[1].text()).toBe('')
+    expect(noteIcons[0].classes()).toContain('note-icon-empty')
+    expect(noteIcons[1].classes()).toContain('note-icon-empty')
   })
 
   it('opens a dialog with the existing note text and saves an edit', async () => {

@@ -7,8 +7,7 @@ import {
   mdiCheck,
   mdiPencil,
   mdiStar,
-  mdiCalendarText,
-  mdiSilverwareForkKnife,
+  mdiNoteTextOutline,
 } from '@mdi/js'
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
@@ -151,15 +150,17 @@ function saveNote() {
 
           <template v-if="!editMode">
             <v-btn
-              v-if="day.recipe"
               variant="tonal"
               density="compact"
               class="meal-btn"
-              @click="router.push({ name: 'recipe-detail', params: { id: day.recipe.id } })"
+              :class="{ 'meal-btn--empty': !day.recipe }"
+              :ripple="!!day.recipe"
+              @click="
+                day.recipe && router.push({ name: 'recipe-detail', params: { id: day.recipe.id } })
+              "
             >
-              {{ day.recipe.name }}
+              {{ day.recipe?.name }}
             </v-btn>
-            <span v-else class="text-body-2 text-medium-emphasis">—</span>
           </template>
 
           <v-autocomplete
@@ -228,14 +229,12 @@ function saveNote() {
             @click="openNote(day.iso, 'day')"
           >
             <v-icon
-              :icon="mdiCalendarText"
+              :icon="mdiNoteTextOutline"
               size="x-small"
               class="note-icon"
               :class="{ 'note-icon-empty': !day.dayNote }"
             />
-            <span class="note-text" :class="{ 'note-empty': !day.dayNote }">{{
-              day.dayNote || 'Day note'
-            }}</span>
+            <span class="note-text">{{ day.dayNote }}</span>
           </button>
           <button
             type="button"
@@ -245,14 +244,12 @@ function saveNote() {
             @click="openNote(day.iso, 'meal')"
           >
             <v-icon
-              :icon="mdiSilverwareForkKnife"
+              :icon="mdiNoteTextOutline"
               size="x-small"
               class="note-icon"
               :class="{ 'note-icon-empty': !day.mealNote }"
             />
-            <span class="note-text" :class="{ 'note-empty': !day.mealNote }">{{
-              day.mealNote || 'Meal note'
-            }}</span>
+            <span class="note-text">{{ day.mealNote }}</span>
           </button>
         </div>
       </div>
@@ -306,6 +303,9 @@ function saveNote() {
 .meal-btn {
   justify-content: flex-start;
 }
+.meal-btn--empty {
+  cursor: default;
+}
 .search-match {
   font-weight: 600;
   background: rgba(var(--v-theme-primary), 0.15);
@@ -343,9 +343,5 @@ function saveNote() {
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.3;
-}
-.note-empty {
-  font-style: italic;
-  opacity: 0.45;
 }
 </style>
