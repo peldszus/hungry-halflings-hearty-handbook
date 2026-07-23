@@ -143,8 +143,8 @@ function saveNote() {
 
     <div class="meal-plan-list">
       <div v-for="day in weekDays" :key="day.iso" class="meal-plan-row">
-        <div class="d-flex align-center">
-          <div class="day-label flex-shrink-0 mr-3">
+        <div class="row-grid">
+          <div class="day-label">
             <span class="font-weight-bold text-body-2">{{ day.weekday }}</span>
             <span class="text-caption text-medium-emphasis ml-1">{{ day.date }}</span>
           </div>
@@ -154,12 +154,12 @@ function saveNote() {
               v-if="day.recipe"
               variant="tonal"
               density="compact"
-              class="flex-grow-1 meal-btn"
+              class="meal-btn"
               @click="router.push({ name: 'recipe-detail', params: { id: day.recipe.id } })"
             >
               {{ day.recipe.name }}
             </v-btn>
-            <span v-else class="text-body-2 text-medium-emphasis flex-grow-1">—</span>
+            <span v-else class="text-body-2 text-medium-emphasis">—</span>
           </template>
 
           <v-autocomplete
@@ -174,7 +174,6 @@ function saveNote() {
             variant="outlined"
             hide-details
             clearable
-            class="flex-grow-1"
             @update:model-value="(v: string | null) => onRecipeChange(day.iso, v)"
             @update:search="(v: string) => (searchText = v)"
           >
@@ -220,7 +219,7 @@ function saveNote() {
           </v-autocomplete>
         </div>
 
-        <div class="notes-row d-flex">
+        <div class="row-grid notes-row">
           <button
             type="button"
             class="note-field"
@@ -228,7 +227,12 @@ function saveNote() {
             :aria-label="`Day note for ${day.weekday} ${day.date}`"
             @click="openNote(day.iso, 'day')"
           >
-            <v-icon :icon="mdiCalendarText" size="x-small" class="note-icon" />
+            <v-icon
+              :icon="mdiCalendarText"
+              size="x-small"
+              class="note-icon"
+              :class="{ 'note-icon-empty': !day.dayNote }"
+            />
             <span class="note-text" :class="{ 'note-empty': !day.dayNote }">{{
               day.dayNote || 'Day note'
             }}</span>
@@ -240,7 +244,12 @@ function saveNote() {
             :aria-label="`Meal note for ${day.weekday} ${day.date}`"
             @click="openNote(day.iso, 'meal')"
           >
-            <v-icon :icon="mdiSilverwareForkKnife" size="x-small" class="note-icon" />
+            <v-icon
+              :icon="mdiSilverwareForkKnife"
+              size="x-small"
+              class="note-icon"
+              :class="{ 'note-icon-empty': !day.mealNote }"
+            />
             <span class="note-text" :class="{ 'note-empty': !day.mealNote }">{{
               day.mealNote || 'Meal note'
             }}</span>
@@ -285,8 +294,14 @@ function saveNote() {
 .meal-plan-row {
   min-height: 40px;
 }
+.row-grid {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  align-items: center;
+  column-gap: 12px;
+}
 .day-label {
-  min-width: 84px;
+  min-width: 0;
 }
 .meal-btn {
   justify-content: flex-start;
@@ -300,15 +315,13 @@ function saveNote() {
 }
 .notes-row {
   margin-top: 2px;
-  padding-left: 96px;
-  gap: 8px;
 }
 .note-field {
   display: flex;
   align-items: center;
   gap: 2px;
   min-width: 0;
-  max-width: 50%;
+  max-width: 100%;
   background: none;
   border: none;
   padding: 0;
@@ -318,7 +331,10 @@ function saveNote() {
 }
 .note-icon {
   flex-shrink: 0;
-  opacity: 0.6;
+  opacity: 0.55;
+}
+.note-icon-empty {
+  opacity: 0.3;
 }
 .note-text {
   font-size: 0.6875rem;
@@ -330,6 +346,6 @@ function saveNote() {
 }
 .note-empty {
   font-style: italic;
-  opacity: 0.7;
+  opacity: 0.45;
 }
 </style>
