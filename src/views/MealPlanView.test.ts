@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, enableAutoUnmount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { VAutocomplete } from 'vuetify/components'
@@ -7,6 +7,11 @@ import { mdiPencil, mdiStar, mdiChevronLeft, mdiChevronRight, mdiCheck } from '@
 import MealPlanView from './MealPlanView.vue'
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
+
+// The note dialog tests below open a teleported v-dialog; auto-unmounting
+// after each test (rather than an ad-hoc wrapper.unmount()) lets Vuetify
+// finish its own teardown so it doesn't error on a later, unrelated test.
+enableAutoUnmount(afterEach)
 
 function iconSelector(path: string) {
   return `svg path[d="${path}"]`
@@ -239,6 +244,105 @@ describe('MealPlanView recipe assignment', () => {
     expect(mealPlan.getForDate(monday)).toBeUndefined()
 
     wrapper.unmount()
+  })
+})
+
+describe('MealPlanView day and meal notes', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    setActivePinia(createPinia())
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-17T12:00:00'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('shows no placeholder text and a dimmed icon for empty notes', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const router = makeRouter()
+    router.push({ name: 'meal-plan' })
+    await router.isReady()
+
+    const wrapper = mount(MealPlanView, { global: { plugins: [router, pinia] } })
+    const firstRow = wrapper.findAll('.meal-plan-row')[0]
+    const noteTexts = firstRow.findAll('.note-text')
+    const noteIcons = firstRow.findAll('.note-icon')
+
+    expect(noteTexts[0].text()).toBe('')
+    expect(noteTexts[1].text()).toBe('')
+    expect(noteIcons[0].classes()).toContain('note-icon-empty')
+    expect(noteIcons[1].classes()).toContain('note-icon-empty')
+  })
+
+  it('opens a dialog with the existing note text and saves an edit', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const mealPlan = useMealPlanStore()
+    // The first day of the displayed week is Monday, 2026-06-15.
+    const monday = '2026-06-15'
+    mealPlan.setDayNote(monday, "Mother's birthday")
+
+    const router = makeRouter()
+    router.push({ name: 'meal-plan' })
+    await router.isReady()
+
+    const wrapper = mount(MealPlanView, {
+      global: { plugins: [router, pinia] },
+      attachTo: document.body,
+    })
+
+    const firstRow = wrapper.findAll('.meal-plan-row')[0]
+    await firstRow.find('[data-testid="day-note-field"]').trigger('click')
+    await flushPromises()
+
+    const textarea = document.querySelector<HTMLTextAreaElement>(
+      '[data-testid="note-dialog-text"] textarea'
+    )
+    expect(textarea?.value).toBe("Mother's birthday")
+
+    textarea!.value = "Mother's birthday - cake at 6pm"
+    textarea!.dispatchEvent(new Event('input'))
+    await flushPromises()
+
+    document.querySelector<HTMLElement>('[data-testid="save-note"]')?.click()
+    await flushPromises()
+
+    expect(mealPlan.getForDate(monday)?.dayNote).toBe("Mother's birthday - cake at 6pm")
+  })
+
+  it('does not save the note when the dialog is cancelled', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const mealPlan = useMealPlanStore()
+    const monday = '2026-06-15'
+
+    const router = makeRouter()
+    router.push({ name: 'meal-plan' })
+    await router.isReady()
+
+    const wrapper = mount(MealPlanView, {
+      global: { plugins: [router, pinia] },
+      attachTo: document.body,
+    })
+
+    const firstRow = wrapper.findAll('.meal-plan-row')[0]
+    await firstRow.find('[data-testid="meal-note-field"]').trigger('click')
+    await flushPromises()
+
+    const textarea = document.querySelector<HTMLTextAreaElement>(
+      '[data-testid="note-dialog-text"] textarea'
+    )
+    textarea!.value = 'No onions'
+    textarea!.dispatchEvent(new Event('input'))
+    await flushPromises()
+
+    document.querySelector<HTMLElement>('[data-testid="cancel-note"]')?.click()
+    await flushPromises()
+
+    expect(mealPlan.getForDate(monday)?.mealNote).toBeUndefined()
   })
 })
 

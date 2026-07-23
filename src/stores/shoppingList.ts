@@ -21,6 +21,7 @@ export const useShoppingListStore = defineStore('shoppingList', () => {
     const entries = mealPlan.getForRange(startDate.value, endDate.value)
 
     const allIngredients: Ingredient[] = entries.flatMap((e) => {
+      if (!e.recipeId) return []
       const recipe = recipes.getById(e.recipeId)
       return recipe?.ingredients.filter((i) => i.addToShoppingList) ?? []
     })

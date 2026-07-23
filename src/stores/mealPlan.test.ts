@@ -152,4 +152,82 @@ describe('mealPlan store', () => {
       expect(saved).toEqual([{ date: '2026-07-01', recipeId: 'recipe-9' }])
     })
   })
+
+  describe('setDayNote / setMealNote', () => {
+    it('sets a day note on a date with no recipe assigned', () => {
+      const store = useMealPlanStore()
+      store.setDayNote('2026-06-14', "Mother's birthday")
+      expect(store.getForDate('2026-06-14')).toEqual({
+        date: '2026-06-14',
+        dayNote: "Mother's birthday",
+      })
+    })
+
+    it('sets a meal note alongside an assigned recipe', () => {
+      const store = useMealPlanStore()
+      store.assign('2026-06-14', 'recipe-1')
+      store.setMealNote('2026-06-14', 'No onions this time')
+      expect(store.getForDate('2026-06-14')).toEqual({
+        date: '2026-06-14',
+        recipeId: 'recipe-1',
+        mealNote: 'No onions this time',
+      })
+    })
+
+    it('trims whitespace and clears the note when set to an empty string', () => {
+      const store = useMealPlanStore()
+      store.setDayNote('2026-06-14', '  Birthday  ')
+      expect(store.getForDate('2026-06-14')?.dayNote).toBe('Birthday')
+
+      store.setDayNote('2026-06-14', '   ')
+      expect(store.getForDate('2026-06-14')?.dayNote).toBeUndefined()
+    })
+
+    it('removes the entry once it has no recipe and no notes left', () => {
+      const store = useMealPlanStore()
+      store.setDayNote('2026-06-14', 'Birthday')
+      store.setDayNote('2026-06-14', '')
+      expect(store.getForDate('2026-06-14')).toBeUndefined()
+      expect(store.entries).toHaveLength(0)
+    })
+
+    it('persists notes to localStorage', () => {
+      const store = useMealPlanStore()
+      store.setDayNote('2026-06-14', 'Birthday')
+      store.setMealNote('2026-06-14', 'Extra spicy')
+      const saved = JSON.parse(localStorage.getItem('mealPlan') ?? '[]')
+      expect(saved).toEqual([{ date: '2026-06-14', dayNote: 'Birthday', mealNote: 'Extra spicy' }])
+    })
+  })
+
+  describe('assign / unassign with notes', () => {
+    it('preserves existing notes when a recipe is assigned', () => {
+      const store = useMealPlanStore()
+      store.setDayNote('2026-06-14', 'Birthday')
+      store.assign('2026-06-14', 'recipe-1')
+      expect(store.getForDate('2026-06-14')).toEqual({
+        date: '2026-06-14',
+        recipeId: 'recipe-1',
+        dayNote: 'Birthday',
+      })
+    })
+
+    it('keeps the entry with its notes when unassigning a recipe', () => {
+      const store = useMealPlanStore()
+      store.assign('2026-06-14', 'recipe-1')
+      store.setDayNote('2026-06-14', 'Birthday')
+      store.unassign('2026-06-14')
+      expect(store.getForDate('2026-06-14')).toEqual({
+        date: '2026-06-14',
+        dayNote: 'Birthday',
+      })
+    })
+
+    it('removes the entry when unassigning a recipe with no notes', () => {
+      const store = useMealPlanStore()
+      store.assign('2026-06-14', 'recipe-1')
+      store.unassign('2026-06-14')
+      expect(store.getForDate('2026-06-14')).toBeUndefined()
+    })
+  })
 })

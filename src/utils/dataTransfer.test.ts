@@ -115,11 +115,46 @@ describe('parseBackup', () => {
     expect(parseBackup(json)).toHaveProperty('error')
   })
 
-  it('rejects an invalid meal plan entry', () => {
+  it('rejects a meal plan entry that is not an object', () => {
+    const json = JSON.stringify(buildBackup([], ['nope' as unknown as MealPlanEntry]))
+    expect(parseBackup(json)).toHaveProperty('error')
+  })
+
+  it('rejects a meal plan entry missing its date', () => {
+    const json = JSON.stringify(buildBackup([], [{ recipeId: 'r1' } as unknown as MealPlanEntry]))
+    expect(parseBackup(json)).toHaveProperty('error')
+  })
+
+  it('drops a meal plan entry with a date but no recipe or notes', () => {
     const json = JSON.stringify(
       buildBackup([], [{ date: '2026-06-14' } as unknown as MealPlanEntry])
     )
-    expect(parseBackup(json)).toHaveProperty('error')
+    const result = parseBackup(json)
+    expect('data' in result).toBe(true)
+    if ('data' in result) expect(result.data.mealPlan).toEqual([])
+  })
+
+  it('round-trips day and meal notes, including a day note with no recipe assigned', () => {
+    const withNotes: MealPlanEntry[] = [
+      { date: '2026-06-14', recipeId: 'r1', mealNote: 'No onions this time' },
+      { date: '2026-06-15', dayNote: "Mother's birthday" },
+    ]
+    const json = JSON.stringify(buildBackup([], withNotes))
+    const result = parseBackup(json)
+    expect('data' in result).toBe(true)
+    if ('data' in result) expect(result.data.mealPlan).toEqual(withNotes)
+  })
+
+  it('imports a legacy meal plan entry with no note fields, leaving notes undefined', () => {
+    const legacy = { date: '2026-06-14', recipeId: 'r1' }
+    const json = JSON.stringify(buildBackup([], [legacy as unknown as MealPlanEntry]))
+    const result = parseBackup(json)
+    expect('data' in result).toBe(true)
+    if ('data' in result) {
+      const imported = result.data.mealPlan[0]
+      expect(imported.dayNote).toBeUndefined()
+      expect(imported.mealNote).toBeUndefined()
+    }
   })
 
   it('accepts optional recipe fields', () => {

@@ -3,7 +3,9 @@ import { ref } from 'vue'
 
 export interface MealPlanEntry {
   date: string
-  recipeId: string
+  recipeId?: string
+  dayNote?: string
+  mealNote?: string
 }
 
 const STORAGE_KEY = 'mealPlan'
@@ -16,18 +18,52 @@ export const useMealPlanStore = defineStore('mealPlan', () => {
   const stored = localStorage.getItem(STORAGE_KEY)
   const entries = ref<MealPlanEntry[]>(stored ? JSON.parse(stored) : [])
 
-  function assign(date: string, recipeId: string) {
-    const index = entries.value.findIndex((e) => e.date === date)
-    if (index >= 0) {
-      entries.value[index].recipeId = recipeId
-    } else {
-      entries.value.push({ date, recipeId })
+  function upsertEntry(date: string): MealPlanEntry {
+    let entry = entries.value.find((e) => e.date === date)
+    if (!entry) {
+      entry = { date }
+      entries.value.push(entry)
     }
+    return entry
+  }
+
+  function pruneIfEmpty(date: string) {
+    const index = entries.value.findIndex((e) => e.date === date)
+    if (index < 0) return
+    const entry = entries.value[index]
+    if (!entry.recipeId && !entry.dayNote && !entry.mealNote) {
+      entries.value.splice(index, 1)
+    }
+  }
+
+  function assign(date: string, recipeId: string) {
+    upsertEntry(date).recipeId = recipeId
     save(entries.value)
   }
 
   function unassign(date: string) {
-    entries.value = entries.value.filter((e) => e.date !== date)
+    const entry = entries.value.find((e) => e.date === date)
+    if (!entry) return
+    delete entry.recipeId
+    pruneIfEmpty(date)
+    save(entries.value)
+  }
+
+  function setDayNote(date: string, note: string) {
+    const trimmed = note.trim()
+    const entry = upsertEntry(date)
+    if (trimmed) entry.dayNote = trimmed
+    else delete entry.dayNote
+    pruneIfEmpty(date)
+    save(entries.value)
+  }
+
+  function setMealNote(date: string, note: string) {
+    const trimmed = note.trim()
+    const entry = upsertEntry(date)
+    if (trimmed) entry.mealNote = trimmed
+    else delete entry.mealNote
+    pruneIfEmpty(date)
     save(entries.value)
   }
 
@@ -69,6 +105,8 @@ export const useMealPlanStore = defineStore('mealPlan', () => {
     entries,
     assign,
     unassign,
+    setDayNote,
+    setMealNote,
     replaceAll,
     getForDate,
     getForRange,
