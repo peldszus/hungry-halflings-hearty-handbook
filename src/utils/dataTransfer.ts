@@ -107,9 +107,16 @@ function normalizeRecipe(value: unknown): Recipe | null {
   return recipe
 }
 
-function isValidMealPlanEntry(value: unknown): value is MealPlanEntry {
-  if (!isRecord(value)) return false
-  return typeof value.date === 'string' && typeof value.recipeId === 'string'
+// Returns the normalized meal plan entry, or null if it is too broken to keep.
+function normalizeMealPlanEntry(value: unknown): MealPlanEntry | null {
+  if (!isRecord(value)) return null
+  if (typeof value.date !== 'string') return null
+
+  const entry: MealPlanEntry = { date: value.date }
+  if (typeof value.recipeId === 'string') entry.recipeId = value.recipeId
+  if (typeof value.dayNote === 'string') entry.dayNote = value.dayNote
+  if (typeof value.mealNote === 'string') entry.mealNote = value.mealNote
+  return entry
 }
 
 export type ParseResult = { data: BackupData } | { error: string }
@@ -143,8 +150,14 @@ export function parseBackup(text: string): ParseResult {
     if (!recipe) return { error: 'The backup contains invalid recipe data.' }
     recipes.push(recipe)
   }
-  if (!Array.isArray(parsed.mealPlan) || !parsed.mealPlan.every(isValidMealPlanEntry)) {
+  if (!Array.isArray(parsed.mealPlan)) {
     return { error: 'The backup contains invalid meal plan data.' }
+  }
+  const mealPlan: MealPlanEntry[] = []
+  for (const raw of parsed.mealPlan) {
+    const entry = normalizeMealPlanEntry(raw)
+    if (!entry) return { error: 'The backup contains invalid meal plan data.' }
+    if (entry.recipeId || entry.dayNote || entry.mealNote) mealPlan.push(entry)
   }
 
   return {
@@ -153,7 +166,7 @@ export function parseBackup(text: string): ParseResult {
       version: parsed.version,
       exportedAt: parsed.exportedAt,
       recipes,
-      mealPlan: parsed.mealPlan,
+      mealPlan,
     },
   }
 }

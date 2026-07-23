@@ -1,7 +1,15 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { mdiChevronLeft, mdiChevronRight, mdiCheck, mdiPencil, mdiStar } from '@mdi/js'
+import {
+  mdiChevronLeft,
+  mdiChevronRight,
+  mdiCheck,
+  mdiPencil,
+  mdiStar,
+  mdiCalendarText,
+  mdiSilverwareForkKnife,
+} from '@mdi/js'
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
 import { highlightInfixMatches } from '@/utils/highlight'
@@ -30,7 +38,7 @@ const weekDays = computed(() => {
     const date = new Date(startOfWeek)
     date.setDate(startOfWeek.getDate() + i)
     const entry = mealPlanStore.getForDate(date.toISOString().slice(0, 10))
-    const recipe = entry ? (recipesStore.getById(entry.recipeId) ?? null) : null
+    const recipe = entry?.recipeId ? (recipesStore.getById(entry.recipeId) ?? null) : null
     return {
       iso: date.toISOString().slice(0, 10),
       weekday: date.toLocaleDateString('en-US', { weekday: 'short' }),
@@ -42,6 +50,8 @@ const weekDays = computed(() => {
       }),
       recipe,
       selectedRecipeId: entry?.recipeId ?? null,
+      dayNote: entry?.dayNote ?? '',
+      mealNote: entry?.mealNote ?? '',
     }
   })
 })
@@ -83,6 +93,32 @@ function onRecipeChange(date: string, value: string | null) {
     mealPlanStore.unassign(date)
   }
 }
+
+type NoteType = 'day' | 'meal'
+
+const noteDialog = ref(false)
+const noteDialogDate = ref('')
+const noteDialogType = ref<NoteType>('day')
+const noteDialogText = ref('')
+
+const noteDialogTitle = computed(() => (noteDialogType.value === 'day' ? 'Day note' : 'Meal note'))
+
+function openNote(date: string, type: NoteType) {
+  const entry = mealPlanStore.getForDate(date)
+  noteDialogDate.value = date
+  noteDialogType.value = type
+  noteDialogText.value = (type === 'day' ? entry?.dayNote : entry?.mealNote) ?? ''
+  noteDialog.value = true
+}
+
+function saveNote() {
+  if (noteDialogType.value === 'day') {
+    mealPlanStore.setDayNote(noteDialogDate.value, noteDialogText.value)
+  } else {
+    mealPlanStore.setMealNote(noteDialogDate.value, noteDialogText.value)
+  }
+  noteDialog.value = false
+}
 </script>
 
 <template>
@@ -106,89 +142,145 @@ function onRecipeChange(date: string, value: string | null) {
     </div>
 
     <div class="meal-plan-list">
-      <div v-for="day in weekDays" :key="day.iso" class="meal-plan-row d-flex align-center">
-        <div class="day-label flex-shrink-0 mr-3">
-          <span class="font-weight-bold text-body-2">{{ day.weekday }}</span>
-          <span class="text-caption text-medium-emphasis ml-1">{{ day.date }}</span>
+      <div v-for="day in weekDays" :key="day.iso" class="meal-plan-row">
+        <div class="d-flex align-center">
+          <div class="day-label flex-shrink-0 mr-3">
+            <span class="font-weight-bold text-body-2">{{ day.weekday }}</span>
+            <span class="text-caption text-medium-emphasis ml-1">{{ day.date }}</span>
+          </div>
+
+          <template v-if="!editMode">
+            <v-btn
+              v-if="day.recipe"
+              variant="tonal"
+              density="compact"
+              class="flex-grow-1 meal-btn"
+              @click="router.push({ name: 'recipe-detail', params: { id: day.recipe.id } })"
+            >
+              {{ day.recipe.name }}
+            </v-btn>
+            <span v-else class="text-body-2 text-medium-emphasis flex-grow-1">—</span>
+          </template>
+
+          <v-autocomplete
+            v-else
+            :model-value="day.selectedRecipeId"
+            :items="recipeSelectItems"
+            item-title="title"
+            item-value="value"
+            :custom-filter="recipeFilter"
+            placeholder="— No meal —"
+            density="compact"
+            variant="outlined"
+            hide-details
+            clearable
+            class="flex-grow-1"
+            @update:model-value="(v: string | null) => onRecipeChange(day.iso, v)"
+            @update:search="(v: string) => (searchText = v)"
+          >
+            <template #item="{ item, props: itemProps }">
+              <v-list-item v-bind="itemProps" :title="undefined">
+                <template #title>
+                  <span
+                    v-for="(seg, i) in highlightInfixMatches(item.title, searchText)"
+                    :key="i"
+                    :class="{ 'search-match': seg.matched }"
+                    >{{ seg.text }}</span
+                  >
+                  <v-icon
+                    v-if="item.favourite"
+                    :icon="mdiStar"
+                    color="yellow-darken-2"
+                    size="small"
+                    class="ml-2"
+                  />
+                </template>
+                <template #subtitle>
+                  <div
+                    v-for="(line, i) in usageLines(item.value, day.iso)"
+                    :key="i"
+                    class="last-used text-disabled"
+                  >
+                    {{ line }}
+                  </div>
+                </template>
+                <div v-if="item.labels.length" class="d-flex flex-wrap ga-1 mt-1">
+                  <v-chip
+                    v-for="label in item.labels"
+                    :key="label"
+                    size="x-small"
+                    color="primary"
+                    variant="tonal"
+                  >
+                    {{ label }}
+                  </v-chip>
+                </div>
+              </v-list-item>
+            </template>
+          </v-autocomplete>
         </div>
 
-        <template v-if="!editMode">
-          <v-btn
-            v-if="day.recipe"
-            variant="tonal"
-            density="compact"
-            class="flex-grow-1 meal-btn"
-            @click="router.push({ name: 'recipe-detail', params: { id: day.recipe.id } })"
+        <div class="notes-row d-flex">
+          <button
+            type="button"
+            class="note-field"
+            data-testid="day-note-field"
+            :aria-label="`Day note for ${day.weekday} ${day.date}`"
+            @click="openNote(day.iso, 'day')"
           >
-            {{ day.recipe.name }}
-          </v-btn>
-          <span v-else class="text-body-2 text-medium-emphasis flex-grow-1">—</span>
-        </template>
-
-        <v-autocomplete
-          v-else
-          :model-value="day.selectedRecipeId"
-          :items="recipeSelectItems"
-          item-title="title"
-          item-value="value"
-          :custom-filter="recipeFilter"
-          placeholder="— No meal —"
-          density="compact"
-          variant="outlined"
-          hide-details
-          clearable
-          class="flex-grow-1"
-          @update:model-value="(v: string | null) => onRecipeChange(day.iso, v)"
-          @update:search="(v: string) => (searchText = v)"
-        >
-          <template #item="{ item, props: itemProps }">
-            <v-list-item v-bind="itemProps" :title="undefined">
-              <template #title>
-                <span
-                  v-for="(seg, i) in highlightInfixMatches(item.title, searchText)"
-                  :key="i"
-                  :class="{ 'search-match': seg.matched }"
-                  >{{ seg.text }}</span
-                >
-                <v-icon
-                  v-if="item.favourite"
-                  :icon="mdiStar"
-                  color="yellow-darken-2"
-                  size="small"
-                  class="ml-2"
-                />
-              </template>
-              <template #subtitle>
-                <div
-                  v-for="(line, i) in usageLines(item.value, day.iso)"
-                  :key="i"
-                  class="last-used text-disabled"
-                >
-                  {{ line }}
-                </div>
-              </template>
-              <div v-if="item.labels.length" class="d-flex flex-wrap ga-1 mt-1">
-                <v-chip
-                  v-for="label in item.labels"
-                  :key="label"
-                  size="x-small"
-                  color="primary"
-                  variant="tonal"
-                >
-                  {{ label }}
-                </v-chip>
-              </div>
-            </v-list-item>
-          </template>
-        </v-autocomplete>
+            <v-icon :icon="mdiCalendarText" size="x-small" class="note-icon" />
+            <span class="note-text" :class="{ 'note-empty': !day.dayNote }">{{
+              day.dayNote || 'Day note'
+            }}</span>
+          </button>
+          <button
+            type="button"
+            class="note-field"
+            data-testid="meal-note-field"
+            :aria-label="`Meal note for ${day.weekday} ${day.date}`"
+            @click="openNote(day.iso, 'meal')"
+          >
+            <v-icon :icon="mdiSilverwareForkKnife" size="x-small" class="note-icon" />
+            <span class="note-text" :class="{ 'note-empty': !day.mealNote }">{{
+              day.mealNote || 'Meal note'
+            }}</span>
+          </button>
+        </div>
       </div>
     </div>
+
+    <v-dialog v-model="noteDialog" max-width="420">
+      <v-card>
+        <v-card-title>{{ noteDialogTitle }}</v-card-title>
+        <v-card-text>
+          <v-textarea
+            v-model="noteDialogText"
+            data-testid="note-dialog-text"
+            rows="3"
+            auto-grow
+            density="compact"
+            variant="outlined"
+            hide-details
+            autofocus
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" data-testid="cancel-note" @click="noteDialog = false">
+            Cancel
+          </v-btn>
+          <v-btn variant="text" color="primary" data-testid="save-note" @click="saveNote">
+            Save
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
 <style scoped>
 .meal-plan-row + .meal-plan-row {
-  margin-top: 8px;
+  margin-top: 6px;
 }
 .meal-plan-row {
   min-height: 40px;
@@ -205,5 +297,39 @@ function onRecipeChange(date: string, value: string | null) {
 }
 .last-used {
   font-size: 0.6875rem;
+}
+.notes-row {
+  margin-top: 2px;
+  padding-left: 96px;
+  gap: 8px;
+}
+.note-field {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  max-width: 50%;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.note-icon {
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+.note-text {
+  font-size: 0.6875rem;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+.note-empty {
+  font-style: italic;
+  opacity: 0.7;
 }
 </style>
