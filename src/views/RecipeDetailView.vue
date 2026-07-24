@@ -43,7 +43,10 @@ const totalPlannedCount = computed(() => {
 
 function duplicateRecipe() {
   if (!recipe.value) return
-  router.push({ name: 'recipe-new', query: { duplicateFrom: recipe.value.id } })
+  // Replace (not push) so the original recipe's detail page isn't left behind in the
+  // history stack — otherwise "Back" from the saved duplicate would land on it instead
+  // of wherever the user was before opening this recipe.
+  router.replace({ name: 'recipe-new', query: { duplicateFrom: recipe.value.id } })
 }
 
 function deleteRecipe() {
