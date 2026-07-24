@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   mdiArrowLeft,
@@ -49,7 +49,14 @@ function duplicateRecipe() {
   router.replace({ name: 'recipe-new', query: { duplicateFrom: recipe.value.id } })
 }
 
+const showDeleteDialog = ref(false)
+
+function confirmDeleteRecipe() {
+  showDeleteDialog.value = true
+}
+
 function deleteRecipe() {
+  showDeleteDialog.value = false
   if (!recipe.value) return
   recipesStore.removeRecipe(recipe.value.id)
   router.push({ name: 'recipes' })
@@ -108,7 +115,7 @@ function ingredientLabel(ingredient: Ingredient) {
           :color="recipe.archived ? 'primary' : undefined"
           @click="toggleArchive"
         />
-        <v-btn :icon="mdiDelete" variant="tonal" color="error" @click="deleteRecipe" />
+        <v-btn :icon="mdiDelete" variant="tonal" color="error" @click="confirmDeleteRecipe" />
       </div>
       <p class="text-body-2 text-medium-emphasis mb-2">
         {{ recipe.servings }} servings · Last edited
@@ -168,5 +175,19 @@ function ingredientLabel(ingredient: Ingredient) {
     </template>
 
     <p v-else class="text-body-2 text-medium-emphasis font-italic">Recipe not found.</p>
+
+    <v-dialog v-model="showDeleteDialog" max-width="400">
+      <v-card>
+        <v-card-title>Delete recipe?</v-card-title>
+        <v-card-text>This can't be undone.</v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="showDeleteDialog = false">Cancel</v-btn>
+          <v-btn color="error" variant="text" data-testid="confirm-delete" @click="deleteRecipe">
+            Delete
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>

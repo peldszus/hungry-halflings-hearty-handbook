@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { mount, flushPromises, enableAutoUnmount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import {
@@ -15,6 +15,9 @@ import RecipeDetailView from './RecipeDetailView.vue'
 import RecipeEditView from './RecipeEditView.vue'
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
+
+// Unmount mounted components after each test so teleported dialog DOM doesn't leak across tests.
+enableAutoUnmount(afterEach)
 
 // The duplicate-flow test below swaps between RecipeDetailView and RecipeEditView as the
 // route changes, so it needs an actual <router-view /> host rather than mounting one view.
@@ -137,7 +140,7 @@ describe('RecipeDetailView actions', () => {
     setActivePinia(createPinia())
   })
 
-  it('deletes the recipe and navigates back to the recipe list', async () => {
+  it('shows a confirmation dialog and only deletes the recipe once confirmed', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useRecipesStore()
@@ -154,10 +157,47 @@ describe('RecipeDetailView actions', () => {
 
     const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
     iconButton(wrapper, mdiDelete)?.dispatchEvent(new Event('click'))
+    await wrapper.vm.$nextTick()
+
+    expect(store.getById(id)).toBeDefined()
+    expect(router.currentRoute.value.name).toBe('recipe-detail')
+    expect(document.body.textContent).toContain('Delete recipe?')
+
+    const confirmBtn = document.querySelector<HTMLElement>('[data-testid="confirm-delete"]')
+    confirmBtn?.click()
+
+    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('recipes'))
+    expect(store.getById(id)).toBeUndefined()
+  })
+
+  it('keeps the recipe when the delete confirmation is cancelled', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    store.addRecipe({
+      name: 'Pasta',
+      ingredients: [{ ingredient: 'pasta', isMain: false, addToShoppingList: true }],
+      servings: 2,
+    })
+    const id = store.recipes[0].id
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-detail', params: { id } })
+    await router.isReady()
+
+    const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
+    iconButton(wrapper, mdiDelete)?.dispatchEvent(new Event('click'))
+    await wrapper.vm.$nextTick()
+
+    expect(document.body.textContent).toContain('Delete recipe?')
+    const cancelButton = Array.from(document.querySelectorAll<HTMLElement>('button')).find((b) =>
+      b.textContent?.includes('Cancel')
+    )
+    cancelButton?.click()
     await flushPromises()
 
-    expect(store.getById(id)).toBeUndefined()
-    expect(router.currentRoute.value.name).toBe('recipes')
+    expect(store.getById(id)).toBeDefined()
+    expect(router.currentRoute.value.name).toBe('recipe-detail')
   })
 
   it('archives and unarchives the recipe', async () => {
@@ -382,9 +422,8 @@ describe('RecipeDetailView actions', () => {
 
     const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
     iconButton(wrapper, mdiContentCopy)?.dispatchEvent(new Event('click'))
-    await flushPromises()
 
-    expect(router.currentRoute.value.name).toBe('recipe-new')
+    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('recipe-new'))
     expect(router.currentRoute.value.query.duplicateFrom).toBe(id)
     expect(store.getById(id)).toBeDefined()
   })
@@ -429,14 +468,12 @@ describe('RecipeDetailView actions', () => {
     await flushPromises()
 
     iconButton(wrapper, mdiContentCopy)?.dispatchEvent(new Event('click'))
-    await flushPromises()
-    expect(router.currentRoute.value.name).toBe('recipe-new')
+    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('recipe-new'))
+    await wrapper.vm.$nextTick()
 
     await wrapper.find('form').trigger('submit.prevent')
-    await flushPromises()
-    await flushPromises()
+    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('recipe-detail'))
 
-    expect(router.currentRoute.value.name).toBe('recipe-detail')
     expect(router.currentRoute.value.params.id).not.toBe(originalId)
 
     const backButton = wrapper.findAll('button').find((b) => b.text().includes('Back'))
