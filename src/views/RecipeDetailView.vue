@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   mdiArrowLeft,
   mdiPencil,
+  mdiContentCopy,
   mdiStar,
   mdiStarOutline,
   mdiArchiveArrowUp,
@@ -39,6 +40,11 @@ const totalPlannedCount = computed(() => {
   if (!recipe.value) return 0
   return mealPlanStore.entries.filter((e) => e.recipeId === recipe.value!.id).length
 })
+
+function duplicateRecipe() {
+  if (!recipe.value) return
+  router.push({ name: 'recipe-new', query: { duplicateFrom: recipe.value.id } })
+}
 
 function deleteRecipe() {
   if (!recipe.value) return
@@ -86,6 +92,7 @@ function ingredientLabel(ingredient: Ingredient) {
           variant="tonal"
           @click="router.push({ name: 'recipe-edit', params: { id: recipe.id } })"
         />
+        <v-btn :icon="mdiContentCopy" variant="tonal" @click="duplicateRecipe" />
         <v-btn
           :icon="recipe.favourite ? mdiStar : mdiStarOutline"
           variant="tonal"

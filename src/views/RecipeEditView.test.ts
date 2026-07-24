@@ -67,6 +67,68 @@ describe('RecipeEditView', () => {
     expect(wrapper.text()).toContain('Edit Recipe')
   })
 
+  it('prefills the form from the source recipe when duplicating', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    store.addRecipe({
+      name: 'Pasta',
+      ingredients: [
+        { ingredient: 'pasta', quantity: 200, unit: 'g', isMain: true, addToShoppingList: true },
+      ],
+      labels: ['dinner'],
+      servings: 3,
+      url: 'https://example.com/pasta',
+    })
+    const id = store.recipes[0].id
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-new', query: { duplicateFrom: id } })
+    await router.isReady()
+
+    const wrapper = mount(RecipeEditView, { global: { plugins: [router, pinia] } })
+
+    expect(wrapper.text()).toContain('Add Recipe')
+    expect(fieldByTestId(wrapper, 'recipe-name').element.getAttribute('value')).toBe(
+      'Copy of Pasta'
+    )
+    expect(fieldByTestId(wrapper, 'recipe-servings').element.getAttribute('value')).toBe('3')
+    expect(fieldByTestId(wrapper, 'recipe-url').element.getAttribute('value')).toBe(
+      'https://example.com/pasta'
+    )
+    const labelsField = wrapper.find('[data-testid="recipe-labels"]')
+    expect(labelsField.text()).toContain('dinner')
+    expect(
+      wrapper.find('[data-testid="ingredient-name"] input').element.getAttribute('value')
+    ).toBe('pasta')
+  })
+
+  it('saves a duplicated recipe as a new recipe without changing the original', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    store.addRecipe({
+      name: 'Pasta',
+      ingredients: [{ ingredient: 'pasta', isMain: false, addToShoppingList: true }],
+      servings: 2,
+    })
+    const originalId = store.recipes[0].id
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-new', query: { duplicateFrom: originalId } })
+    await router.isReady()
+
+    const wrapper = mount(RecipeEditView, { global: { plugins: [router, pinia] } })
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(store.recipes).toHaveLength(2)
+    const duplicate = store.recipes.find((r) => r.id !== originalId)
+    expect(duplicate?.name).toBe('Copy of Pasta')
+    expect(duplicate?.id).not.toBe(originalId)
+    expect(store.getById(originalId)?.name).toBe('Pasta')
+  })
+
   it('shows not found for an unknown recipe id in edit mode', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)

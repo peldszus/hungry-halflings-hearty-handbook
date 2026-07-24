@@ -15,10 +15,25 @@ const existingRecipe = computed(() =>
 )
 const notFound = computed(() => isEditMode.value && !existingRecipe.value)
 
-const name = ref(existingRecipe.value?.name ?? '')
-const servings = ref(String(existingRecipe.value?.servings ?? 2))
-const url = ref(existingRecipe.value?.url ?? '')
-const labels = ref<string[]>(existingRecipe.value?.labels ? [...existingRecipe.value.labels] : [])
+const duplicateSource = computed(() =>
+  !isEditMode.value && route.query.duplicateFrom
+    ? store.getById(route.query.duplicateFrom as string)
+    : undefined
+)
+
+const name = ref(
+  existingRecipe.value?.name ??
+    (duplicateSource.value ? `Copy of ${duplicateSource.value.name}` : '')
+)
+const servings = ref(String(existingRecipe.value?.servings ?? duplicateSource.value?.servings ?? 2))
+const url = ref(existingRecipe.value?.url ?? duplicateSource.value?.url ?? '')
+const labels = ref<string[]>(
+  existingRecipe.value?.labels
+    ? [...existingRecipe.value.labels]
+    : duplicateSource.value?.labels
+      ? [...duplicateSource.value.labels]
+      : []
+)
 
 const defaultUnitSuggestions = ['g', 'kg', 'ml', 'l']
 const unitSuggestions = computed(() => {
@@ -47,7 +62,9 @@ function emptyRow(): Ingredient {
 const ingredientRows = ref<Ingredient[]>(
   existingRecipe.value?.ingredients.length
     ? existingRecipe.value.ingredients.map((i) => ({ ...i }))
-    : [emptyRow()]
+    : duplicateSource.value?.ingredients.length
+      ? duplicateSource.value.ingredients.map((i) => ({ ...i }))
+      : [emptyRow()]
 )
 
 function currentSnapshot() {

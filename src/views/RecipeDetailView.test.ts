@@ -9,6 +9,7 @@ import {
   mdiArchiveArrowDown,
   mdiArchiveArrowUp,
   mdiCart,
+  mdiContentCopy,
 } from '@mdi/js'
 import RecipeDetailView from './RecipeDetailView.vue'
 import { useRecipesStore } from '@/stores/recipes'
@@ -24,6 +25,7 @@ function makeRouter() {
     routes: [
       { path: '/recipes/:id', name: 'recipe-detail', component: RecipeDetailView },
       { path: '/recipes/:id/edit', name: 'recipe-edit', component: { template: '<div />' } },
+      { path: '/recipes/new', name: 'recipe-new', component: { template: '<div />' } },
       { path: '/recipes', name: 'recipes', component: { template: '<div />' } },
     ],
   })
@@ -356,6 +358,30 @@ describe('RecipeDetailView actions', () => {
     expect(wrapper.text()).toContain('Last used 4 days ago')
     expect(wrapper.text()).toContain('Next planned for in 2 days')
     expect(wrapper.text()).toContain('Planned 2 times in total')
+  })
+
+  it('navigates to the new recipe form with the source id when duplicating', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    store.addRecipe({
+      name: 'Pasta',
+      ingredients: [{ ingredient: 'pasta', isMain: false, addToShoppingList: true }],
+      servings: 2,
+    })
+    const id = store.recipes[0].id
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-detail', params: { id } })
+    await router.isReady()
+
+    const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
+    iconButton(wrapper, mdiContentCopy)?.dispatchEvent(new Event('click'))
+    await flushPromises()
+
+    expect(router.currentRoute.value.name).toBe('recipe-new')
+    expect(router.currentRoute.value.query.duplicateFrom).toBe(id)
+    expect(store.getById(id)).toBeDefined()
   })
 
   it('shows a not-found message for a missing recipe', async () => {
