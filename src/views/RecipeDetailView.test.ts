@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHashHistory } from 'vue-router'
@@ -9,10 +9,16 @@ import {
   mdiArchiveArrowDown,
   mdiArchiveArrowUp,
   mdiCart,
+  mdiContentCopy,
 } from '@mdi/js'
 import RecipeDetailView from './RecipeDetailView.vue'
+import RecipeEditView from './RecipeEditView.vue'
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
+
+// The duplicate-flow test below swaps between RecipeDetailView and RecipeEditView as the
+// route changes, so it needs an actual <router-view /> host rather than mounting one view.
+const RouterHost = { template: '<router-view />' }
 
 function iconSelector(path: string) {
   return `svg path[d="${path}"]`
@@ -24,6 +30,7 @@ function makeRouter() {
     routes: [
       { path: '/recipes/:id', name: 'recipe-detail', component: RecipeDetailView },
       { path: '/recipes/:id/edit', name: 'recipe-edit', component: { template: '<div />' } },
+      { path: '/recipes/new', name: 'recipe-new', component: { template: '<div />' } },
       { path: '/recipes', name: 'recipes', component: { template: '<div />' } },
     ],
   })
@@ -358,6 +365,30 @@ describe('RecipeDetailView actions', () => {
     expect(wrapper.text()).toContain('Planned 2 times in total')
   })
 
+  it('navigates to the new recipe form with the source id when duplicating', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    store.addRecipe({
+      name: 'Pasta',
+      ingredients: [{ ingredient: 'pasta', isMain: false, addToShoppingList: true }],
+      servings: 2,
+    })
+    const id = store.recipes[0].id
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-detail', params: { id } })
+    await router.isReady()
+
+    const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
+    iconButton(wrapper, mdiContentCopy)?.dispatchEvent(new Event('click'))
+    await flushPromises()
+
+    expect(router.currentRoute.value.name).toBe('recipe-new')
+    expect(router.currentRoute.value.query.duplicateFrom).toBe(id)
+    expect(store.getById(id)).toBeDefined()
+  })
+
   it('shows a not-found message for a missing recipe', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
@@ -369,5 +400,48 @@ describe('RecipeDetailView actions', () => {
     const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
 
     expect(wrapper.text()).toContain('Recipe not found.')
+  })
+
+  it('going back after saving a duplicate returns to the recipe list, not the original recipe', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    store.addRecipe({
+      name: 'Pasta',
+      ingredients: [{ ingredient: 'pasta', isMain: false, addToShoppingList: true }],
+      servings: 2,
+    })
+    const originalId = store.recipes[0].id
+
+    const router = createRouter({
+      history: createWebHashHistory(),
+      routes: [
+        { path: '/recipes/:id', name: 'recipe-detail', component: RecipeDetailView },
+        { path: '/recipes/new', name: 'recipe-new', component: RecipeEditView },
+        { path: '/recipes', name: 'recipes', component: { template: '<div />' } },
+      ],
+    })
+
+    await router.push({ name: 'recipes' })
+    await router.push({ name: 'recipe-detail', params: { id: originalId } })
+
+    const wrapper = mount(RouterHost, { global: { plugins: [router, pinia] } })
+    await flushPromises()
+
+    iconButton(wrapper, mdiContentCopy)?.dispatchEvent(new Event('click'))
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('recipe-new')
+
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+    await flushPromises()
+
+    expect(router.currentRoute.value.name).toBe('recipe-detail')
+    expect(router.currentRoute.value.params.id).not.toBe(originalId)
+
+    const backButton = wrapper.findAll('button').find((b) => b.text().includes('Back'))
+    await backButton?.trigger('click')
+
+    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('recipes'))
   })
 })
