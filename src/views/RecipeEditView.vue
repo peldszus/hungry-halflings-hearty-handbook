@@ -114,9 +114,6 @@ async function addIngredientRow() {
   await nextTick()
   const btn = addIngredientBtnRef.value?.$el as HTMLElement | undefined
   if (!btn) return
-  const bottomNav = document.querySelector('.v-bottom-navigation')
-  const bottomNavHeight = bottomNav?.getBoundingClientRect().height ?? 0
-  btn.style.scrollMarginBottom = `${bottomNavHeight + 16}px`
   btn.scrollIntoView?.({ behavior: 'smooth', block: 'end' })
 }
 
@@ -282,7 +279,7 @@ function save() {
           ref="addIngredientBtnRef"
           variant="tonal"
           :prepend-icon="mdiPlus"
-          class="mb-4"
+          class="mb-4 add-ingredient-btn"
           @click="addIngredientRow"
         >
           Add ingredient
@@ -323,3 +320,12 @@ function save() {
     </v-dialog>
   </v-container>
 </template>
+
+<style scoped>
+/* Keeps the button clear of the bottom navigation when a new row scrolls it into view.
+   --v-layout-bottom is published by Vuetify's layout and tracks whatever bottom chrome is
+   mounted, so this stays correct when the layout switches to a rail or drawer. */
+.add-ingredient-btn {
+  scroll-margin-bottom: calc(var(--v-layout-bottom, 0px) + 16px);
+}
+</style>

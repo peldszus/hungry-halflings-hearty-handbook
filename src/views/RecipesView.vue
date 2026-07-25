@@ -104,7 +104,10 @@ function lastUsedLabel(recipeId: string) {
 <style scoped>
 .fab {
   position: fixed;
-  bottom: 80px;
+  /* --v-layout-bottom is published by Vuetify's layout on v-main and is the height of whatever
+     bottom chrome is currently mounted, so the FAB clears the navigation bar on a phone and
+     sits flush at the viewport edge once the layout switches to a rail or drawer. */
+  bottom: calc(var(--v-layout-bottom, 0px) + 16px + env(safe-area-inset-bottom, 0px));
   right: 16px;
 }
 </style>
