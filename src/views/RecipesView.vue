@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { mdiMagnify, mdiStar, mdiPlus, mdiArchiveOutline } from '@mdi/js'
+import { mdiMagnify, mdiStar, mdiPlus, mdiArchiveOutline, mdiBookOpenVariant } from '@mdi/js'
+import EmptyState from '@/components/EmptyState.vue'
+import { useSnackbar } from '@/composables/useSnackbar'
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
 import { highlightInfixMatches } from '@/utils/highlight'
@@ -10,6 +12,9 @@ import { formatLastUsedLabel } from '@/utils/relativeTime'
 const router = useRouter()
 const store = useRecipesStore()
 const mealPlanStore = useMealPlanStore()
+
+// Material lifts the FAB out of the way while a snackbar is showing.
+const { visible: snackbarVisible } = useSnackbar()
 
 const searchText = ref('')
 
@@ -113,9 +118,20 @@ function lastUsedLabel(recipeId: string) {
 
     <v-card>
       <v-card-title>{{ listTitle }} ({{ displayedRecipes.length }})</v-card-title>
-      <v-card-text v-if="displayedRecipes.length === 0" class="text-medium-emphasis font-italic">
-        {{ emptyMessage }}
-      </v-card-text>
+      <EmptyState
+        v-if="displayedRecipes.length === 0"
+        :icon="store.recipeCount === 0 ? mdiBookOpenVariant : mdiMagnify"
+        :headline="emptyMessage"
+        :supporting="
+          store.recipeCount === 0
+            ? 'Add your first recipe to start planning meals.'
+            : 'Try a different search or clear your filters.'
+        "
+      >
+        <template v-if="hasFilters" #action>
+          <v-btn variant="tonal" @click="clearFilters">Clear filters</v-btn>
+        </template>
+      </EmptyState>
       <v-list v-else>
         <v-list-item
           v-for="recipe in displayedRecipes"
@@ -157,6 +173,7 @@ function lastUsedLabel(recipeId: string) {
       :prepend-icon="store.recipeCount > 0 ? undefined : mdiPlus"
       color="primary"
       class="fab"
+      :class="{ 'fab--raised': snackbarVisible }"
       size="large"
       elevation="4"
       aria-label="Add recipe"
@@ -176,5 +193,16 @@ function lastUsedLabel(recipeId: string) {
      sits flush at the viewport edge once the layout switches to a rail or drawer. */
   bottom: calc(var(--v-layout-bottom, 0px) + 16px + env(safe-area-inset-bottom, 0px));
   right: 16px;
+  transition: bottom 200ms cubic-bezier(0.2, 0, 0, 1);
+}
+/* Clears the snackbar rather than sitting behind it. */
+.fab--raised {
+  bottom: calc(var(--v-layout-bottom, 0px) + 80px + env(safe-area-inset-bottom, 0px));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fab {
+    transition: none;
+  }
 }
 </style>

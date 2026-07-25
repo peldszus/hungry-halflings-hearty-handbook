@@ -128,17 +128,31 @@ function saveNote() {
     <h1 class="text-h5 mb-2">Meal Plan</h1>
 
     <div class="d-flex align-center mb-3 ga-2">
-      <v-btn :icon="mdiChevronLeft" variant="tonal" size="small" @click="weekOffset--" />
+      <v-btn
+        :icon="mdiChevronLeft"
+        variant="tonal"
+        size="small"
+        aria-label="Previous week"
+        @click="weekOffset--"
+      />
       <span class="text-body-2 flex-grow-1 text-center">
         {{ weekDays[0].dateWithYear }} – {{ weekDays[6].dateWithYear }}
       </span>
-      <v-btn :icon="mdiChevronRight" variant="tonal" size="small" @click="weekOffset++" />
+      <v-btn
+        :icon="mdiChevronRight"
+        variant="tonal"
+        size="small"
+        aria-label="Next week"
+        @click="weekOffset++"
+      />
       <v-btn
         :icon="editMode ? mdiCheck : mdiPencil"
         class="ml-2"
         :color="editMode ? 'primary' : undefined"
         variant="tonal"
         size="small"
+        :aria-label="editMode ? 'Done editing meal plan' : 'Edit meal plan'"
+        :aria-pressed="editMode"
         @click="editMode = !editMode"
       />
     </div>

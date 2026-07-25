@@ -116,6 +116,17 @@ export const useRecipesStore = defineStore('recipes', () => {
     save(recipes.value)
   }
 
+  /**
+   * Puts a removed recipe back exactly as it was, keeping its original id so meal-plan
+   * entries pointing at it still resolve. Backs the undo action on the delete snackbar.
+   * No-op if a recipe with that id is already present.
+   */
+  function restoreRecipe(recipe: Recipe) {
+    if (recipes.value.some((r) => r.id === recipe.id)) return
+    recipes.value = [...recipes.value, recipe]
+    save(recipes.value)
+  }
+
   function getById(id: string): Recipe | undefined {
     return recipes.value.find((r) => r.id === id)
   }
@@ -157,6 +168,7 @@ export const useRecipesStore = defineStore('recipes', () => {
     addRecipe,
     updateRecipe,
     removeRecipe,
+    restoreRecipe,
     getById,
     archiveRecipe,
     unarchiveRecipe,

@@ -22,11 +22,13 @@ import {
 import { useRecipesStore, type Ingredient } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
 import { formatRelativeTime } from '@/utils/relativeTime'
+import { useSnackbar } from '@/composables/useSnackbar'
 
 const route = useRoute()
 const router = useRouter()
 const recipesStore = useRecipesStore()
 const mealPlanStore = useMealPlanStore()
+const { showUndo } = useSnackbar()
 
 const recipe = computed(() => recipesStore.getById(route.params.id as string))
 
@@ -64,16 +66,25 @@ function confirmDeleteRecipe() {
 function deleteRecipe() {
   showDeleteDialog.value = false
   if (!recipe.value) return
-  recipesStore.removeRecipe(recipe.value.id)
+
+  // Snapshot before removal so the undo action can restore it with its original id, which
+  // keeps any meal-plan entries pointing at this recipe working.
+  const removed = { ...recipe.value, ingredients: [...recipe.value.ingredients] }
+  recipesStore.removeRecipe(removed.id)
   router.push({ name: 'recipes' })
+  showUndo(`Deleted “${removed.name}”`, () => recipesStore.restoreRecipe(removed))
 }
 
 function toggleArchive() {
   if (!recipe.value) return
-  if (recipe.value.archived) {
-    recipesStore.unarchiveRecipe(recipe.value.id)
+  const { id, name, archived } = recipe.value
+
+  if (archived) {
+    recipesStore.unarchiveRecipe(id)
+    showUndo(`Unarchived “${name}”`, () => recipesStore.archiveRecipe(id))
   } else {
-    recipesStore.archiveRecipe(recipe.value.id)
+    recipesStore.archiveRecipe(id)
+    showUndo(`Archived “${name}”`, () => recipesStore.unarchiveRecipe(id))
   }
 }
 

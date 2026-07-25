@@ -318,3 +318,51 @@ describe('recipes store', () => {
     expect(saved).toEqual([replacement])
   })
 })
+
+describe('restoreRecipe', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    setActivePinia(createPinia())
+  })
+
+  it('puts a deleted recipe back with its original id', () => {
+    const store = useRecipesStore()
+    store.addRecipe({
+      name: 'Pasta',
+      ingredients: [{ ingredient: 'pasta', isMain: true, addToShoppingList: true }],
+      servings: 2,
+    })
+    const original = { ...store.recipes[0] }
+
+    store.removeRecipe(original.id)
+    expect(store.getById(original.id)).toBeUndefined()
+
+    store.restoreRecipe(original)
+
+    expect(store.getById(original.id)).toEqual(original)
+    expect(store.recipes).toHaveLength(1)
+  })
+
+  it('persists the restored recipe', () => {
+    const store = useRecipesStore()
+    store.addRecipe({ name: 'Pasta', ingredients: [], servings: 2 })
+    const original = { ...store.recipes[0] }
+
+    store.removeRecipe(original.id)
+    store.restoreRecipe(original)
+
+    const stored = JSON.parse(localStorage.getItem('recipes') ?? '[]')
+    expect(stored).toHaveLength(1)
+    expect(stored[0].id).toBe(original.id)
+  })
+
+  it('does not duplicate a recipe that is still present', () => {
+    const store = useRecipesStore()
+    store.addRecipe({ name: 'Pasta', ingredients: [], servings: 2 })
+    const original = { ...store.recipes[0] }
+
+    store.restoreRecipe(original)
+
+    expect(store.recipes).toHaveLength(1)
+  })
+})
