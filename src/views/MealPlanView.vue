@@ -13,11 +13,15 @@ import {
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
 import { highlightInfixMatches } from '@/utils/highlight'
+import { useSnackbar } from '@/composables/useSnackbar'
 import { formatAssignmentUsageLines } from '@/utils/relativeTime'
 
 const router = useRouter()
 const recipesStore = useRecipesStore()
 const mealPlanStore = useMealPlanStore()
+
+// Material lifts the FAB out of the way while a snackbar is showing.
+const { visible: snackbarVisible } = useSnackbar()
 
 const weekOffset = ref(0)
 const editMode = ref(false)
@@ -145,16 +149,6 @@ function saveNote() {
         aria-label="Next week"
         @click="weekOffset++"
       />
-      <v-btn
-        :icon="editMode ? mdiCheck : mdiPencil"
-        class="ml-2"
-        :color="editMode ? 'primary' : undefined"
-        variant="tonal"
-        size="small"
-        :aria-label="editMode ? 'Done editing meal plan' : 'Edit meal plan'"
-        :aria-pressed="editMode"
-        @click="editMode = !editMode"
-      />
     </div>
 
     <div class="meal-plan-list">
@@ -186,7 +180,7 @@ function saveNote() {
                   : (editMode = true)
               "
             >
-              {{ day.recipe?.name ?? 'Add meal' }}
+              <span class="meal-btn__label">{{ day.recipe?.name ?? 'Add meal' }}</span>
             </v-btn>
           </template>
 
@@ -300,6 +294,22 @@ function saveNote() {
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Editing the week is this screen's primary action, so it sits where Recipes puts its own:
+         a bottom-right FAB. Confirming an edit uses the same position rather than sending the
+         user back up to a toolbar. -->
+    <v-btn
+      :icon="editMode ? mdiCheck : mdiPencil"
+      :color="editMode ? 'primary' : undefined"
+      class="fab"
+      :class="{ 'fab--raised': snackbarVisible }"
+      size="large"
+      elevation="4"
+      :aria-label="editMode ? 'Done editing meal plan' : 'Edit meal plan'"
+      :aria-pressed="editMode"
+      data-testid="toggle-edit-mode"
+      @click="editMode = !editMode"
+    />
   </v-container>
 </template>
 
@@ -320,7 +330,9 @@ function saveNote() {
 }
 .row-grid {
   display: grid;
-  grid-template-columns: 84px 1fr;
+  /* minmax(0, 1fr) rather than 1fr: a 1fr track's automatic minimum is its content size, so the
+     column would refuse to shrink and a long recipe name pushed past the row. */
+  grid-template-columns: 84px minmax(0, 1fr);
   align-items: center;
   column-gap: 12px;
 }
@@ -329,6 +341,21 @@ function saveNote() {
 }
 .meal-btn {
   justify-content: flex-start;
+  /* Overrides VBtn's size-derived min-width so the button can shrink with its column. */
+  min-width: 0;
+}
+/* .v-btn__content is a flex container that centres its children, so text-overflow can never
+   apply to it — a long name would overflow both edges and get clipped mid-word. Let it shrink
+   and align left; the truncation happens on the label span inside it. */
+.meal-btn :deep(.v-btn__content) {
+  min-width: 0;
+  justify-content: flex-start;
+}
+.meal-btn__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .meal-btn--empty {
   opacity: 0.75;

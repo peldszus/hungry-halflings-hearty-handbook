@@ -13,3 +13,28 @@
 .last-used {
   font-size: 0.6875rem;
 }
+
+/*
+ * Floating action button, used by Recipes and Meal Plan for each screen's primary action.
+ *
+ * --v-layout-bottom is published by Vuetify's layout on v-main and is the height of whatever
+ * bottom chrome is currently mounted, so the FAB clears the navigation bar on a phone and sits
+ * flush at the viewport edge once the layout switches to a rail or drawer.
+ */
+.fab {
+  position: fixed;
+  bottom: calc(var(--v-layout-bottom, 0px) + 16px + env(safe-area-inset-bottom, 0px));
+  right: 16px;
+  transition: bottom 200ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Clears the snackbar rather than sitting behind it. */
+.fab--raised {
+  bottom: calc(var(--v-layout-bottom, 0px) + 80px + env(safe-area-inset-bottom, 0px));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fab {
+    transition: none;
+  }
+}

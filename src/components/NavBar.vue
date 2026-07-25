@@ -3,8 +3,7 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { mdiHome, mdiBookOpenVariant, mdiCalendarMonth, mdiCart } from '@mdi/js'
-import DataTransferMenu from './DataTransferMenu.vue'
-import ThemeToggle from './ThemeToggle.vue'
+import AppMenu from './AppMenu.vue'
 
 const route = useRoute()
 
@@ -25,10 +24,9 @@ const activeNav = computed(() => route.meta.nav ?? 'home')
 
 <template>
   <v-app-bar :elevation="0" color="surface" scroll-behavior="elevate">
-    <v-app-bar-title>Hungry Halflings Hearty Handbook</v-app-bar-title>
+    <v-app-bar-title class="app-title">Hungry Halflings Hearty Handbook</v-app-bar-title>
     <template #append>
-      <ThemeToggle />
-      <DataTransferMenu />
+      <AppMenu />
     </template>
   </v-app-bar>
 
@@ -57,3 +55,14 @@ const activeNav = computed(() => route.meta.nav ?? 'home')
     </v-btn>
   </v-bottom-navigation>
 </template>
+
+<style scoped>
+/*
+ * The app name is long — at Vuetify's default 1.25rem it needs 308px, which does not fit beside
+ * the menu button until roughly 400px wide. Scale it down on narrow viewports so the full name
+ * is always readable rather than being cut to "Hungry Halflings Hearty Hand…".
+ */
+.app-title {
+  font-size: clamp(1rem, 4.4vw, 1.25rem);
+}
+</style>

@@ -353,9 +353,15 @@ function save() {
 
 .save-bar {
   position: sticky;
-  bottom: calc(var(--v-layout-bottom, 0px) + 12px);
+  /* Flush against the bottom navigation — any offset here shows a strip of page background
+     through the gap. */
+  bottom: var(--v-layout-bottom, 0px);
   z-index: 2;
   padding-block: 12px;
+  /* v-container pads 16px at every breakpoint; cancel it so the opaque background spans the
+     full width instead of leaving the page showing down both sides. */
+  margin-inline: -16px;
+  padding-inline: 16px;
   /* Opaque, so form fields scrolling underneath don't show through. */
   background: rgb(var(--v-theme-surface));
 }

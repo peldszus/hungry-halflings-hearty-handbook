@@ -51,7 +51,8 @@ src/
     ShoppingListView.vue  # Date range + ingredient list
   components/
     NavBar.vue         # Top app bar + bottom navigation
-    DataTransferMenu.vue  # Export/import menu and dialog
+    AppMenu.vue        # App bar overflow menu: theme options, export/import
+    ThemeMenuItems.vue # Theme preference list items, rendered inside AppMenu
   utils/
     dataTransfer.ts    # Export/import serialisation and validation
     highlight.ts       # Search-term highlighting

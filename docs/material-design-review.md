@@ -263,7 +263,8 @@ misclick waiting to happen. The M3-correct treatment:
 | Favourite                    | Toggle in the app bar                                                 | It is a _state_, not an action            |
 | Duplicate / Archive / Delete | Overflow menu in the app bar, with text labels; delete tinted `error` | Infrequent; separates the destructive one |
 
-`DataTransferMenu.vue` already implements exactly this pattern and is the right shape to copy.
+The app-bar overflow menu (`AppMenu.vue`) already implements exactly this pattern and is the
+right shape to copy.
 Anything that stays an icon button gets an `aria-label` and a tooltip.
 
 Separately, the four stacked grey `text-body-2` paragraphs of metadata are not a Material metadata
@@ -322,7 +323,7 @@ Two consequences of that are worth stating plainly, because the snackbar is now 
 
 Undo-bearing messages get a longer timeout (10s) than plain notifications (6s) for this reason.
 
-Import-overwrite is _not_ covered by a snackbar — `DataTransferMenu.vue` does not raise one. It
+Import-overwrite is _not_ covered by a snackbar — `AppMenu.vue` does not raise one. It
 still guards itself with an explicit warning and a confirm step in its dialog, which is the right
 treatment since that action is genuinely irreversible.
 
