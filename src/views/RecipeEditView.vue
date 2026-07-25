@@ -317,7 +317,11 @@ function save() {
           type="url"
           data-testid="recipe-url"
         />
-        <v-btn type="submit" color="primary" block>Save</v-btn>
+        <!-- Sticky so Save stays reachable on a long ingredient list instead of requiring a
+             scroll to the bottom of the form. -->
+        <div class="save-bar">
+          <v-btn type="submit" color="primary" block size="large">Save</v-btn>
+        </div>
       </v-form>
     </template>
 
@@ -345,5 +349,14 @@ function save() {
    mounted, so this stays correct when the layout switches to a rail or drawer. */
 .add-ingredient-btn {
   scroll-margin-bottom: calc(var(--v-layout-bottom, 0px) + 16px);
+}
+
+.save-bar {
+  position: sticky;
+  bottom: calc(var(--v-layout-bottom, 0px) + 12px);
+  z-index: 2;
+  padding-block: 12px;
+  /* Opaque, so form fields scrolling underneath don't show through. */
+  background: rgb(var(--v-theme-surface));
 }
 </style>

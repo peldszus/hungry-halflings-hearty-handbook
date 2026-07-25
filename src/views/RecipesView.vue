@@ -167,10 +167,26 @@ function lastUsedLabel(recipeId: string) {
     </v-card>
 
     <!-- Extended while the collection is empty, so the primary action explains itself on first
-         run; collapses to an icon FAB once there are recipes to look at. -->
+         run; collapses to an icon FAB once there are recipes to look at.
+         These are two elements rather than one with conditional props: VBtn renders the `icon`
+         prop as its content only when it has no default slot, and a slot that is present but
+         renders nothing still counts — which left the icon FAB an empty circle. -->
     <v-btn
-      :icon="store.recipeCount > 0 ? mdiPlus : undefined"
-      :prepend-icon="store.recipeCount > 0 ? undefined : mdiPlus"
+      v-if="store.recipeCount === 0"
+      :prepend-icon="mdiPlus"
+      color="primary"
+      class="fab"
+      :class="{ 'fab--raised': snackbarVisible }"
+      size="large"
+      elevation="4"
+      data-testid="add-recipe"
+      @click="router.push({ name: 'recipe-new' })"
+    >
+      New recipe
+    </v-btn>
+    <v-btn
+      v-else
+      :icon="mdiPlus"
       color="primary"
       class="fab"
       :class="{ 'fab--raised': snackbarVisible }"
@@ -179,9 +195,7 @@ function lastUsedLabel(recipeId: string) {
       aria-label="Add recipe"
       data-testid="add-recipe"
       @click="router.push({ name: 'recipe-new' })"
-    >
-      <template v-if="store.recipeCount === 0">New recipe</template>
-    </v-btn>
+    />
   </v-container>
 </template>
 

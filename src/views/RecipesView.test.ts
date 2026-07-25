@@ -258,3 +258,44 @@ describe('RecipesView filters', () => {
     expect(names(wrapper)).toHaveLength(2)
   })
 })
+
+describe('RecipesView add-recipe FAB', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    setActivePinia(createPinia())
+  })
+
+  async function mountWith(recipeCount: number) {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    for (let i = 0; i < recipeCount; i++) {
+      store.addRecipe({ name: `Recipe ${i}`, ingredients: [], servings: 1 })
+    }
+
+    const router = makeRouter()
+    router.push({ name: 'recipes' })
+    await router.isReady()
+
+    return mount(RecipesView, { global: { plugins: [router, pinia] } })
+  }
+
+  it('is extended with a label while there are no recipes', async () => {
+    const wrapper = await mountWith(0)
+    const fab = wrapper.find('[data-testid="add-recipe"]')
+
+    expect(fab.text()).toContain('New recipe')
+    expect(fab.find('svg').exists()).toBe(true)
+  })
+
+  // VBtn renders the `icon` prop as content only when it has no default slot, and a slot that
+  // renders nothing still counts — which previously left this an empty circle.
+  it('still renders its icon once collapsed to an icon FAB', async () => {
+    const wrapper = await mountWith(1)
+    const fab = wrapper.find('[data-testid="add-recipe"]')
+
+    expect(fab.text()).toBe('')
+    expect(fab.find('svg').exists()).toBe(true)
+    expect(fab.attributes('aria-label')).toBe('Add recipe')
+  })
+})
