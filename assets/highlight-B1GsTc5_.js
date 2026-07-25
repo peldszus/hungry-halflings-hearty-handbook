@@ -1,0 +1,1 @@
+function f(e,t){if(!t)return[{text:e,matched:!1}];const s=e.toLowerCase().indexOf(t.toLowerCase());if(s===-1)return[{text:e,matched:!1}];const c=[],h=e.slice(0,s),a=e.slice(s,s+t.length),n=e.slice(s+t.length);return h&&c.push({text:h,matched:!1}),c.push({text:a,matched:!0}),n&&c.push({text:n,matched:!1}),c}export{f as h};
