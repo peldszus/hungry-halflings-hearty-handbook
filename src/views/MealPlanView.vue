@@ -300,7 +300,7 @@ function saveNote() {
          user back up to a toolbar. -->
     <v-btn
       :icon="editMode ? mdiCheck : mdiPencil"
-      :color="editMode ? 'primary' : undefined"
+      color="primary"
       class="fab"
       :class="{ 'fab--raised': snackbarVisible }"
       size="large"
