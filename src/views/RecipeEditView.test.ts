@@ -366,8 +366,8 @@ describe('RecipeEditView', () => {
     const quantityInput = wrapper.find('[data-testid="ingredient-row"] input[type="number"]')
     await quantityInput.setValue('200')
 
-    const checkboxes = wrapper.findAll('[data-testid="ingredient-row"] input[type="checkbox"]')
-    await checkboxes[0].setValue(true)
+    // Main / Shop are filter chips; Shop defaults on, so only Main needs toggling.
+    await wrapper.find('[data-testid="ingredient-main"]').trigger('click')
 
     await wrapper.find('form').trigger('submit.prevent')
     await flushPromises()

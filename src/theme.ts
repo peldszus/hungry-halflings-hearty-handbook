@@ -19,9 +19,13 @@ export const lightTheme: ThemeDefinition = {
     'on-primary': '#FFFFFF',
     'primary-container': '#AFF0C9',
     'on-primary-container': '#00210F',
+    // Vuetify's own light theme defines these and they survive the merge, so without an
+    // override they stay Vuetify's stock blue and teal.
+    'primary-darken-1': '#1F5138',
 
     secondary: '#4F6354',
     'on-secondary': '#FFFFFF',
+    'secondary-darken-1': '#3A4C3F',
     'secondary-container': '#D1E8D5',
     'on-secondary-container': '#0D1F13',
 
@@ -73,9 +77,11 @@ export const darkTheme: ThemeDefinition = {
     'on-primary': '#00391F',
     'primary-container': '#0F512F',
     'on-primary-container': '#AFF0C9',
+    'primary-darken-1': '#79BA92',
 
     secondary: '#B6CCB9',
     'on-secondary': '#223527',
+    'secondary-darken-1': '#9CB2A0',
     'secondary-container': '#384B3C',
     'on-secondary-container': '#D1E8D5',
 

@@ -12,6 +12,12 @@ import {
   mdiDelete,
   mdiCircleSmall,
   mdiCart,
+  mdiDotsVertical,
+  mdiOpenInNew,
+  mdiSilverwareForkKnife,
+  mdiCalendarClock,
+  mdiCalendarCheck,
+  mdiClockEditOutline,
 } from '@mdi/js'
 import { useRecipesStore, type Ingredient } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
@@ -76,6 +82,27 @@ function toggleFavourite() {
   recipesStore.toggleFavourite(recipe.value.id)
 }
 
+/**
+ * Metadata shown under the title. Presented as an icon + value row rather than the previous
+ * stack of grey sentences, which was not a Material metadata treatment.
+ */
+const metadata = computed(() => {
+  if (!recipe.value) return []
+  const planned = totalPlannedCount.value
+  return [
+    {
+      icon: mdiSilverwareForkKnife,
+      text: `${recipe.value.servings} ${recipe.value.servings === 1 ? 'serving' : 'servings'}`,
+    },
+    { icon: mdiCalendarCheck, text: lastUsedLabel.value },
+    { icon: mdiCalendarClock, text: nextPlannedLabel.value },
+    {
+      icon: mdiClockEditOutline,
+      text: `Planned ${planned} ${planned === 1 ? 'time' : 'times'} in total`,
+    },
+  ]
+})
+
 function ingredientLabel(ingredient: Ingredient) {
   const parts: string[] = []
   if (ingredient.quantity != null) parts.push(String(ingredient.quantity))
@@ -96,39 +123,97 @@ function ingredientLabel(ingredient: Ingredient) {
         <h1 class="text-h6">{{ recipe.name }}</h1>
         <v-chip v-if="recipe.archived">Archived</v-chip>
       </div>
-      <div class="d-flex ga-2 mb-4">
+      <!--
+        Editing is the primary action here, so it gets a filled button with a visible label.
+        Favouriting is a state rather than an action, so it stays an icon toggle. The
+        infrequent and destructive actions move into an overflow menu with text labels, which
+        also stops delete sitting adjacent to archive at identical visual weight.
+      -->
+      <div class="d-flex align-center ga-2 mb-4">
         <v-btn
-          :icon="mdiPencil"
-          variant="tonal"
+          color="primary"
+          :prepend-icon="mdiPencil"
+          data-testid="edit-recipe"
           @click="router.push({ name: 'recipe-edit', params: { id: recipe.id } })"
-        />
-        <v-btn :icon="mdiContentCopy" variant="tonal" @click="duplicateRecipe" />
+        >
+          Edit
+        </v-btn>
+
         <v-btn
           :icon="recipe.favourite ? mdiStar : mdiStarOutline"
-          variant="tonal"
+          variant="text"
           :color="recipe.favourite ? 'yellow-darken-2' : undefined"
+          :aria-label="recipe.favourite ? 'Remove from favourites' : 'Add to favourites'"
+          :aria-pressed="recipe.favourite"
+          data-testid="toggle-favourite"
           @click="toggleFavourite"
-        />
-        <v-btn
-          :icon="recipe.archived ? mdiArchiveArrowUp : mdiArchiveArrowDown"
-          variant="tonal"
-          :color="recipe.archived ? 'primary' : undefined"
-          @click="toggleArchive"
-        />
-        <v-btn :icon="mdiDelete" variant="tonal" color="error" @click="confirmDeleteRecipe" />
+        >
+          <v-icon :icon="recipe.favourite ? mdiStar : mdiStarOutline" />
+          <v-tooltip activator="parent" location="bottom">
+            {{ recipe.favourite ? 'Remove from favourites' : 'Add to favourites' }}
+          </v-tooltip>
+        </v-btn>
+
+        <v-spacer />
+
+        <v-menu>
+          <template #activator="{ props }">
+            <v-btn
+              v-bind="props"
+              :icon="mdiDotsVertical"
+              variant="text"
+              aria-label="More recipe actions"
+              data-testid="recipe-actions"
+            />
+          </template>
+          <v-list>
+            <v-list-item
+              :prepend-icon="mdiContentCopy"
+              title="Duplicate"
+              data-testid="duplicate-recipe"
+              @click="duplicateRecipe"
+            />
+            <v-list-item
+              :prepend-icon="recipe.archived ? mdiArchiveArrowUp : mdiArchiveArrowDown"
+              :title="recipe.archived ? 'Unarchive' : 'Archive'"
+              data-testid="toggle-archive"
+              @click="toggleArchive"
+            />
+            <v-divider class="my-1" />
+            <v-list-item
+              :prepend-icon="mdiDelete"
+              title="Delete"
+              base-color="error"
+              data-testid="delete-recipe"
+              @click="confirmDeleteRecipe"
+            />
+          </v-list>
+        </v-menu>
       </div>
-      <p class="text-body-2 text-medium-emphasis mb-2">
-        {{ recipe.servings }} servings · Last edited
-        {{ new Date(recipe.lastEditedAt).toLocaleDateString() }}
-      </p>
-      <p class="text-body-2 text-medium-emphasis mb-0">{{ lastUsedLabel }}</p>
-      <p class="text-body-2 text-medium-emphasis mb-0">{{ nextPlannedLabel }}</p>
-      <p class="text-body-2 text-medium-emphasis mb-2">
-        Planned {{ totalPlannedCount }} {{ totalPlannedCount === 1 ? 'time' : 'times' }} in total
-      </p>
-      <p v-if="recipe.url" class="mb-6">
-        <a :href="recipe.url" target="_blank" rel="noopener noreferrer">{{ recipe.url }}</a>
-      </p>
+
+      <div class="d-flex flex-column ga-1 mb-4">
+        <div
+          v-for="item in metadata"
+          :key="item.text"
+          class="d-flex align-center ga-2 text-body-2 text-medium-emphasis"
+        >
+          <v-icon :icon="item.icon" size="small" />
+          <span>{{ item.text }}</span>
+        </div>
+      </div>
+
+      <v-btn
+        v-if="recipe.url"
+        :href="recipe.url"
+        target="_blank"
+        rel="noopener noreferrer"
+        variant="tonal"
+        size="small"
+        :append-icon="mdiOpenInNew"
+        class="mb-6"
+      >
+        Open recipe source
+      </v-btn>
 
       <div v-if="(recipe.labels ?? []).length" class="d-flex flex-wrap ga-2 mb-6">
         <v-chip v-for="label in recipe.labels" :key="label" color="primary">
@@ -143,19 +228,24 @@ function ingredientLabel(ingredient: Ingredient) {
           :key="index"
           :prepend-icon="mdiCircleSmall"
         >
-          <v-list-item-title>
-            {{ ingredientLabel(ingredient) }}
-            <v-chip v-if="ingredient.isMain" size="x-small" color="primary" class="ml-2">
-              Main
-            </v-chip>
+          <!-- The chips previously sat inside v-list-item-title, which truncates with an
+               ellipsis, so a long ingredient name clipped them off the right edge. They now
+               wrap onto their own line. -->
+          <v-list-item-title>{{ ingredientLabel(ingredient) }}</v-list-item-title>
+          <div
+            v-if="ingredient.isMain || ingredient.addToShoppingList"
+            class="d-flex flex-wrap ga-1 mt-1"
+          >
+            <v-chip v-if="ingredient.isMain" size="x-small" color="primary">Main</v-chip>
             <v-chip
               v-if="ingredient.addToShoppingList"
               size="x-small"
               color="secondary"
               :prepend-icon="mdiCart"
-              class="ml-2 px-2"
-            />
-          </v-list-item-title>
+            >
+              Shopping
+            </v-chip>
+          </div>
         </v-list-item>
       </v-list>
       <p v-else class="text-body-2 text-medium-emphasis font-italic">No ingredients listed.</p>

@@ -2,15 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount, flushPromises, enableAutoUnmount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHashHistory } from 'vue-router'
-import {
-  mdiStar,
-  mdiStarOutline,
-  mdiDelete,
-  mdiArchiveArrowDown,
-  mdiArchiveArrowUp,
-  mdiCart,
-  mdiContentCopy,
-} from '@mdi/js'
+import { mdiStar, mdiStarOutline, mdiCart } from '@mdi/js'
 import RecipeDetailView from './RecipeDetailView.vue'
 import RecipeEditView from './RecipeEditView.vue'
 import { useRecipesStore } from '@/stores/recipes'
@@ -86,8 +78,16 @@ describe('RecipeDetailView favourite button', () => {
   })
 })
 
-function iconButton(wrapper: ReturnType<typeof mount>, iconPath: string) {
-  return wrapper.find(iconSelector(iconPath)).element.closest('button')
+// Duplicate, archive and delete live in an overflow menu, so they have to be opened first.
+// The menu content is teleported, so it is queried from document rather than the wrapper.
+async function clickMenuAction(wrapper: ReturnType<typeof mount>, testId: string) {
+  await wrapper.find('[data-testid="recipe-actions"]').trigger('click')
+  await flushPromises()
+
+  const item = document.querySelector<HTMLElement>(`[data-testid="${testId}"]`)
+  expect(item, `expected a menu action with data-testid="${testId}"`).not.toBeNull()
+  item?.click()
+  await flushPromises()
 }
 
 describe('RecipeDetailView labels', () => {
@@ -156,8 +156,7 @@ describe('RecipeDetailView actions', () => {
     await router.isReady()
 
     const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
-    iconButton(wrapper, mdiDelete)?.dispatchEvent(new Event('click'))
-    await wrapper.vm.$nextTick()
+    await clickMenuAction(wrapper, 'delete-recipe')
 
     expect(store.getById(id)).toBeDefined()
     expect(router.currentRoute.value.name).toBe('recipe-detail')
@@ -186,8 +185,7 @@ describe('RecipeDetailView actions', () => {
     await router.isReady()
 
     const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
-    iconButton(wrapper, mdiDelete)?.dispatchEvent(new Event('click'))
-    await wrapper.vm.$nextTick()
+    await clickMenuAction(wrapper, 'delete-recipe')
 
     expect(document.body.textContent).toContain('Delete recipe?')
     const cancelButton = Array.from(document.querySelectorAll<HTMLElement>('button')).find((b) =>
@@ -217,19 +215,17 @@ describe('RecipeDetailView actions', () => {
 
     const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
 
-    expect(wrapper.find(iconSelector(mdiArchiveArrowDown)).exists()).toBe(true)
-    iconButton(wrapper, mdiArchiveArrowDown)?.dispatchEvent(new Event('click'))
-    await wrapper.vm.$nextTick()
+    expect(store.getById(id)?.archived).toBe(false)
+
+    await clickMenuAction(wrapper, 'toggle-archive')
 
     expect(store.getById(id)?.archived).toBe(true)
     expect(wrapper.text()).toContain('Archived')
-    expect(wrapper.find(iconSelector(mdiArchiveArrowUp)).exists()).toBe(true)
 
-    iconButton(wrapper, mdiArchiveArrowUp)?.dispatchEvent(new Event('click'))
-    await wrapper.vm.$nextTick()
+    await clickMenuAction(wrapper, 'toggle-archive')
 
     expect(store.getById(id)?.archived).toBe(false)
-    expect(wrapper.find(iconSelector(mdiArchiveArrowDown)).exists()).toBe(true)
+    expect(wrapper.text()).not.toContain('Archived')
   })
 
   it('renders an empty-ingredients message when there are none', async () => {
@@ -421,7 +417,7 @@ describe('RecipeDetailView actions', () => {
     await router.isReady()
 
     const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
-    iconButton(wrapper, mdiContentCopy)?.dispatchEvent(new Event('click'))
+    await clickMenuAction(wrapper, 'duplicate-recipe')
 
     await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('recipe-new'))
     expect(router.currentRoute.value.query.duplicateFrom).toBe(id)
@@ -467,7 +463,7 @@ describe('RecipeDetailView actions', () => {
     const wrapper = mount(RouterHost, { global: { plugins: [router, pinia] } })
     await flushPromises()
 
-    iconButton(wrapper, mdiContentCopy)?.dispatchEvent(new Event('click'))
+    await clickMenuAction(wrapper, 'duplicate-recipe')
     await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('recipe-new'))
     await wrapper.vm.$nextTick()
 

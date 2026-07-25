@@ -117,6 +117,22 @@ async function addIngredientRow() {
   btn.scrollIntoView?.({ behavior: 'smooth', block: 'end' })
 }
 
+/**
+ * The Main / Shop toggles are rendered as a chip group, which models selection as a list of
+ * values, so the two booleans are projected in and out of that shape.
+ */
+function rowFlags(row: { isMain: boolean; addToShoppingList: boolean }) {
+  const flags: string[] = []
+  if (row.isMain) flags.push('main')
+  if (row.addToShoppingList) flags.push('shop')
+  return flags
+}
+
+function setRowFlags(row: { isMain: boolean; addToShoppingList: boolean }, flags: string[]) {
+  row.isMain = flags.includes('main')
+  row.addToShoppingList = flags.includes('shop')
+}
+
 function removeIngredientRow(index: number) {
   ingredientRows.value.splice(index, 1)
   if (ingredientRows.value.length === 0) ingredientRows.value.push(emptyRow())
@@ -211,8 +227,10 @@ function save() {
 
         <h2 class="text-subtitle-1 font-weight-bold mb-2">Ingredients</h2>
         <template v-for="(row, index) in ingredientRows" :key="index">
-          <v-divider v-if="index > 0" class="my-3" />
-          <div class="py-1" data-testid="ingredient-row">
+          <!-- Each ingredient is its own tonal surface rather than divider-separated rows: on a
+               phone the previous layout crammed a 3/3/6 grid, two compact checkboxes and a
+               delete button onto one line, all below the 48dp touch target minimum. -->
+          <v-card variant="tonal" class="mb-3 pa-3" data-testid="ingredient-row">
             <v-row density="compact">
               <v-col cols="3">
                 <v-text-field
@@ -248,31 +266,31 @@ function save() {
                 />
               </v-col>
             </v-row>
-            <div class="d-flex align-center ga-4">
-              <v-checkbox
-                v-model="row.isMain"
-                label="Main"
-                hide-details
-                density="compact"
-                class="text-caption flex-grow-0"
-              />
-              <v-checkbox
-                v-model="row.addToShoppingList"
-                label="Shop"
-                hide-details
-                density="compact"
-                class="text-caption flex-grow-0"
-              />
+            <div class="d-flex align-center ga-2">
+              <!-- Filter chips rather than compact checkboxes: larger targets, and the M3
+                   pattern for a small set of independent toggles. -->
+              <v-chip-group
+                :model-value="rowFlags(row)"
+                multiple
+                filter
+                class="pa-0"
+                @update:model-value="(flags) => setRowFlags(row, flags as string[])"
+              >
+                <v-chip value="main" data-testid="ingredient-main">Main</v-chip>
+                <v-chip value="shop" data-testid="ingredient-shop">Shop</v-chip>
+              </v-chip-group>
               <v-spacer />
               <v-btn
                 :icon="mdiDelete"
-                size="x-small"
+                size="small"
                 variant="text"
                 color="error"
+                :aria-label="`Remove ingredient ${index + 1}`"
+                data-testid="remove-ingredient"
                 @click="removeIngredientRow(index)"
               />
             </div>
-          </div>
+          </v-card>
         </template>
 
         <v-btn

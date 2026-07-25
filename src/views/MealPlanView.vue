@@ -8,6 +8,7 @@ import {
   mdiPencil,
   mdiStar,
   mdiNoteTextOutline,
+  mdiPlus,
 } from '@mdi/js'
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
@@ -25,6 +26,8 @@ const searchText = ref('')
 watch(weekOffset, () => {
   editMode.value = false
 })
+
+const todayIso = new Date().toISOString().slice(0, 10)
 
 const weekDays = computed(() => {
   const today = new Date()
@@ -141,7 +144,12 @@ function saveNote() {
     </div>
 
     <div class="meal-plan-list">
-      <div v-for="day in weekDays" :key="day.iso" class="meal-plan-row">
+      <div
+        v-for="day in weekDays"
+        :key="day.iso"
+        class="meal-plan-row"
+        :class="{ 'meal-plan-row--today': day.iso === todayIso }"
+      >
         <div class="row-grid">
           <div class="day-label">
             <span class="font-weight-bold text-body-2">{{ day.weekday }}</span>
@@ -149,17 +157,22 @@ function saveNote() {
           </div>
 
           <template v-if="!editMode">
+            <!-- An empty day now offers to fill itself rather than rendering as a
+                 disabled-looking blank button. -->
             <v-btn
               variant="tonal"
               density="compact"
               class="meal-btn"
               :class="{ 'meal-btn--empty': !day.recipe }"
-              :ripple="!!day.recipe"
+              :color="day.recipe ? undefined : 'primary'"
+              :prepend-icon="day.recipe ? undefined : mdiPlus"
               @click="
-                day.recipe && router.push({ name: 'recipe-detail', params: { id: day.recipe.id } })
+                day.recipe
+                  ? router.push({ name: 'recipe-detail', params: { id: day.recipe.id } })
+                  : (editMode = true)
               "
             >
-              {{ day.recipe?.name }}
+              {{ day.recipe?.name ?? 'Add meal' }}
             </v-btn>
           </template>
 
@@ -283,6 +296,14 @@ function saveNote() {
 .meal-plan-row {
   min-height: 40px;
 }
+/* Today is the row users look for first, so it gets a tonal container behind it. */
+.meal-plan-row--today {
+  background: rgba(var(--v-theme-primary-container), 0.6);
+  border-radius: 12px;
+  margin-inline: -8px;
+  padding-inline: 8px;
+  padding-block: 4px;
+}
 .row-grid {
   display: grid;
   grid-template-columns: 84px 1fr;
@@ -296,7 +317,7 @@ function saveNote() {
   justify-content: flex-start;
 }
 .meal-btn--empty {
-  cursor: default;
+  opacity: 0.75;
 }
 .notes-row {
   margin-top: 2px;

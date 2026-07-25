@@ -124,7 +124,7 @@ describe('RecipesView search filtering', () => {
     await wrapper.vm.$nextTick()
 
     expect(wrapper.findAll('.v-list-item')).toHaveLength(0)
-    expect(wrapper.text()).toContain('No recipes match your search.')
+    expect(wrapper.text()).toContain('No recipes match your filters.')
   })
 
   it('shows an empty-library message when there are no recipes at all', async () => {
@@ -137,7 +137,7 @@ describe('RecipesView search filtering', () => {
 
     const wrapper = mount(RecipesView, { global: { plugins: [router, pinia] } })
 
-    expect(wrapper.text()).toContain('No recipes yet. Tap + to add one.')
+    expect(wrapper.text()).toContain('No recipes yet.')
   })
 
   it('shows the last-used relative time as the subtitle', async () => {
@@ -190,5 +190,71 @@ describe('RecipesView search filtering', () => {
     const salad = wrapper.findAll('.v-list-item').find((item) => item.text().includes('Salad'))
     expect(salad?.text()).toContain('Last used')
     expect(salad?.text()).toContain('Next planned for')
+  })
+})
+
+describe('RecipesView filters', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    setActivePinia(createPinia())
+  })
+
+  function seed() {
+    const store = useRecipesStore()
+    store.addRecipe({ name: 'Starred Soup', ingredients: [], labels: ['quick'], servings: 1 })
+    store.addRecipe({ name: 'Plain Stew', ingredients: [], labels: ['slow'], servings: 1 })
+    store.addRecipe({ name: 'Old Roast', ingredients: [], servings: 1 })
+    store.toggleFavourite(store.recipes[0].id)
+    store.archiveRecipe(store.recipes[2].id)
+    return store
+  }
+
+  async function mountView() {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = seed()
+
+    const router = makeRouter()
+    router.push({ name: 'recipes' })
+    await router.isReady()
+
+    const wrapper = mount(RecipesView, { global: { plugins: [router, pinia] } })
+    return { wrapper, store }
+  }
+
+  function names(wrapper: ReturnType<typeof mount>) {
+    return wrapper.findAll('.v-list-item').map((item) => item.text())
+  }
+
+  it('hides archived recipes by default', async () => {
+    const { wrapper } = await mountView()
+    expect(names(wrapper).join(' ')).not.toContain('Old Roast')
+  })
+
+  it('shows archived recipes once the archived filter is on', async () => {
+    const { wrapper } = await mountView()
+    await wrapper.find('[data-testid="filter-archived"]').trigger('click')
+
+    expect(names(wrapper).join(' ')).toContain('Old Roast')
+  })
+
+  it('narrows to favourites only', async () => {
+    const { wrapper } = await mountView()
+    await wrapper.find('[data-testid="filter-favourites"]').trigger('click')
+
+    const shown = names(wrapper)
+    expect(shown).toHaveLength(1)
+    expect(shown[0]).toContain('Starred Soup')
+  })
+
+  it('clears every active filter', async () => {
+    const { wrapper } = await mountView()
+    await wrapper.find('[data-testid="filter-favourites"]').trigger('click')
+    expect(names(wrapper)).toHaveLength(1)
+
+    const clear = wrapper.findAll('button').find((b) => b.text() === 'Clear')
+    await clear?.trigger('click')
+
+    expect(names(wrapper)).toHaveLength(2)
   })
 })
