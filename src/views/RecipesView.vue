@@ -34,7 +34,7 @@ function lastUsedLabel(recipeId: string) {
 
 <template>
   <v-container>
-    <h1 class="text-h4 text-primary mb-4">Recipes</h1>
+    <h1 class="text-h5 mb-4">Recipes</h1>
 
     <v-text-field
       v-model="searchText"

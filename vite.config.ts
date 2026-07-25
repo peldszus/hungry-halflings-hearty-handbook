@@ -26,7 +26,9 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        // woff2 must be listed or the self-hosted Roboto is not precached and the app
+        // falls back to a system font when offline.
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
       },
     }),
   ],

@@ -181,7 +181,7 @@ function save() {
     </v-btn>
 
     <template v-if="!notFound">
-      <h1 class="text-h5 text-primary mb-4">
+      <h1 class="text-h6 mb-4">
         {{ isEditMode ? 'Edit Recipe' : 'Add Recipe' }}
       </h1>
 

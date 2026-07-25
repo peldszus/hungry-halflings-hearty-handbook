@@ -93,7 +93,7 @@ function ingredientLabel(ingredient: Ingredient) {
 
     <template v-if="recipe">
       <div class="d-flex align-center ga-2 mb-2">
-        <h1 class="text-h5 text-primary">{{ recipe.name }}</h1>
+        <h1 class="text-h6">{{ recipe.name }}</h1>
         <v-chip v-if="recipe.archived" size="small" variant="tonal">Archived</v-chip>
       </div>
       <div class="d-flex ga-2 mb-4">

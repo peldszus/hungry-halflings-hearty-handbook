@@ -1,6 +1,7 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { createVuetify } from 'vuetify'
+import './styles/fonts.css'
 import 'vuetify/styles'
 import { aliases, mdi } from 'vuetify/iconsets/mdi-svg'
 import App from './App.vue'

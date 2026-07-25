@@ -122,7 +122,7 @@ function saveNote() {
 
 <template>
   <v-container>
-    <h1 class="text-h6 text-primary mb-2">Meal Plan</h1>
+    <h1 class="text-h5 mb-2">Meal Plan</h1>
 
     <div class="d-flex align-center mb-3 gap-2">
       <v-btn :icon="mdiChevronLeft" variant="tonal" size="small" @click="weekOffset--" />
