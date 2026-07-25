@@ -96,6 +96,41 @@ export const useMealPlanStore = defineStore('mealPlan', () => {
     return dates.length ? dates.sort()[0] : undefined
   }
 
+  /**
+   * Meals still ahead of the user — entries that actually name a recipe, from today onwards.
+   * Note-only entries are not meals, so they don't count.
+   */
+  function countUpcomingMeals(today: string = new Date().toISOString().slice(0, 10)): number {
+    return entries.value.filter((e) => e.recipeId && e.date >= today).length
+  }
+
+  function nextIsoDate(iso: string): string {
+    return new Date(new Date(`${iso}T00:00:00Z`).getTime() + 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10)
+  }
+
+  /**
+   * How far the plan reaches without a hole in it: `days` is the unbroken run of days with a
+   * recipe assigned, starting at today (so 0 when today itself has no meal, 1 when only today
+   * does), and `firstUnplannedDate` is the day the run stops at — the day to plan from next.
+   * Days carrying only a note are not planned days.
+   */
+  function getPlanningCoverage(today: string = new Date().toISOString().slice(0, 10)): {
+    days: number
+    firstUnplannedDate: string
+  } {
+    const planned = new Set(entries.value.filter((e) => e.recipeId).map((e) => e.date))
+    let days = 0
+    let date = today
+    // A year of lookahead is far past any useful planning horizon, and bounds the walk.
+    while (planned.has(date) && days < 366) {
+      days++
+      date = nextIsoDate(date)
+    }
+    return { days, firstUnplannedDate: date }
+  }
+
   function replaceAll(next: MealPlanEntry[]) {
     entries.value = next
     save(entries.value)
@@ -112,5 +147,7 @@ export const useMealPlanStore = defineStore('mealPlan', () => {
     getForRange,
     getLastUsedDate,
     getNextPlannedDate,
+    countUpcomingMeals,
+    getPlanningCoverage,
   }
 })

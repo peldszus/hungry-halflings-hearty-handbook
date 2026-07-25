@@ -230,4 +230,109 @@ describe('mealPlan store', () => {
       expect(store.getForDate('2026-06-14')).toBeUndefined()
     })
   })
+
+  describe('countUpcomingMeals', () => {
+    const today = '2026-06-14'
+
+    it('counts today and later meals', () => {
+      const store = useMealPlanStore()
+      store.assign(today, 'recipe-1')
+      store.assign('2026-06-16', 'recipe-2')
+      expect(store.countUpcomingMeals(today)).toBe(2)
+    })
+
+    it('ignores meals in the past', () => {
+      const store = useMealPlanStore()
+      store.assign('2026-06-13', 'recipe-1')
+      store.assign(today, 'recipe-2')
+      expect(store.countUpcomingMeals(today)).toBe(1)
+    })
+
+    it('ignores days that only carry notes', () => {
+      const store = useMealPlanStore()
+      store.setDayNote('2026-06-15', 'Eating out')
+      store.setMealNote('2026-06-16', 'Extra spicy')
+      expect(store.countUpcomingMeals(today)).toBe(0)
+    })
+
+    it('is zero for an empty plan', () => {
+      const store = useMealPlanStore()
+      expect(store.countUpcomingMeals(today)).toBe(0)
+    })
+  })
+
+  describe('getPlanningCoverage', () => {
+    const today = '2026-06-14'
+
+    it('reports no coverage when today has no meal', () => {
+      const store = useMealPlanStore()
+      store.assign('2026-06-15', 'recipe-1')
+      expect(store.getPlanningCoverage(today)).toEqual({
+        days: 0,
+        firstUnplannedDate: today,
+      })
+    })
+
+    it('counts an unbroken run starting today', () => {
+      const store = useMealPlanStore()
+      store.assign(today, 'recipe-1')
+      store.assign('2026-06-15', 'recipe-2')
+      store.assign('2026-06-16', 'recipe-3')
+      expect(store.getPlanningCoverage(today)).toEqual({
+        days: 3,
+        firstUnplannedDate: '2026-06-17',
+      })
+    })
+
+    it('counts today alone', () => {
+      const store = useMealPlanStore()
+      store.assign(today, 'recipe-1')
+      expect(store.getPlanningCoverage(today)).toEqual({
+        days: 1,
+        firstUnplannedDate: '2026-06-15',
+      })
+    })
+
+    it('stops at the first gap and ignores meals planned beyond it', () => {
+      const store = useMealPlanStore()
+      store.assign(today, 'recipe-1')
+      store.assign('2026-06-15', 'recipe-2')
+      // 2026-06-16 is the gap.
+      store.assign('2026-06-17', 'recipe-3')
+      store.assign('2026-06-18', 'recipe-4')
+      expect(store.getPlanningCoverage(today)).toEqual({
+        days: 2,
+        firstUnplannedDate: '2026-06-16',
+      })
+    })
+
+    it('does not treat a note-only day as planned', () => {
+      const store = useMealPlanStore()
+      store.assign(today, 'recipe-1')
+      store.setDayNote('2026-06-15', 'Eating out')
+      store.assign('2026-06-16', 'recipe-2')
+      expect(store.getPlanningCoverage(today)).toEqual({
+        days: 1,
+        firstUnplannedDate: '2026-06-15',
+      })
+    })
+
+    it('walks across a month boundary', () => {
+      const store = useMealPlanStore()
+      store.assign('2026-06-30', 'recipe-1')
+      store.assign('2026-07-01', 'recipe-2')
+      expect(store.getPlanningCoverage('2026-06-30')).toEqual({
+        days: 2,
+        firstUnplannedDate: '2026-07-02',
+      })
+    })
+
+    it('reports an empty plan as uncovered', () => {
+      const store = useMealPlanStore()
+      expect(store.getPlanningCoverage(today)).toEqual({
+        days: 0,
+        firstUnplannedDate: today,
+      })
+    })
+  })
 })
