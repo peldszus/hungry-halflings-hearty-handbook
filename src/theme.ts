@@ -124,3 +124,25 @@ export const themes = {
   light: lightTheme,
   dark: darkTheme,
 }
+
+/**
+ * Global component defaults. These replace props that were previously repeated inline across
+ * the views — add to this block rather than re-typing `variant`/`density`/`rounded` per usage.
+ *
+ * `rounded: 'pill'` on VBtn gives M3's pill-shaped buttons while leaving icon buttons circular,
+ * since a pill radius on an element with equal width and height is a circle.
+ */
+export const defaults = {
+  VCard: { rounded: 'lg' },
+  VBtn: { rounded: 'pill' },
+  VChip: { size: 'small', variant: 'tonal' },
+  VList: { rounded: 'lg' },
+  VAlert: { variant: 'tonal' },
+  VDialog: { maxWidth: 420 },
+  VTextField: { variant: 'outlined' },
+  VTextarea: { variant: 'outlined' },
+  VSelect: { variant: 'outlined' },
+  VCombobox: { variant: 'outlined' },
+  VAutocomplete: { variant: 'outlined' },
+  VFileInput: { variant: 'outlined' },
+}

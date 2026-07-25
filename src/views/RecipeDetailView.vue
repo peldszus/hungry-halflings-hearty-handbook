@@ -94,7 +94,7 @@ function ingredientLabel(ingredient: Ingredient) {
     <template v-if="recipe">
       <div class="d-flex align-center ga-2 mb-2">
         <h1 class="text-h6">{{ recipe.name }}</h1>
-        <v-chip v-if="recipe.archived" size="small" variant="tonal">Archived</v-chip>
+        <v-chip v-if="recipe.archived">Archived</v-chip>
       </div>
       <div class="d-flex ga-2 mb-4">
         <v-btn
@@ -131,13 +131,7 @@ function ingredientLabel(ingredient: Ingredient) {
       </p>
 
       <div v-if="(recipe.labels ?? []).length" class="d-flex flex-wrap ga-2 mb-6">
-        <v-chip
-          v-for="label in recipe.labels"
-          :key="label"
-          size="small"
-          color="primary"
-          variant="tonal"
-        >
+        <v-chip v-for="label in recipe.labels" :key="label" color="primary">
           {{ label }}
         </v-chip>
       </div>
@@ -151,20 +145,13 @@ function ingredientLabel(ingredient: Ingredient) {
         >
           <v-list-item-title>
             {{ ingredientLabel(ingredient) }}
-            <v-chip
-              v-if="ingredient.isMain"
-              size="x-small"
-              color="primary"
-              variant="tonal"
-              class="ml-2"
-            >
+            <v-chip v-if="ingredient.isMain" size="x-small" color="primary" class="ml-2">
               Main
             </v-chip>
             <v-chip
               v-if="ingredient.addToShoppingList"
               size="x-small"
               color="secondary"
-              variant="tonal"
               :prepend-icon="mdiCart"
               class="ml-2 px-2"
             />

@@ -3,10 +3,11 @@ import { createPinia } from 'pinia'
 import { createVuetify } from 'vuetify'
 import './styles/fonts.css'
 import 'vuetify/styles'
+import './styles/shared.css'
 import { aliases, mdi } from 'vuetify/iconsets/mdi-svg'
 import App from './App.vue'
 import router from './router'
-import { themes } from './theme'
+import { defaults, themes } from './theme'
 import { readStoredThemePreference } from './composables/useAppTheme'
 
 const vuetify = createVuetify({
@@ -21,6 +22,7 @@ const vuetify = createVuetify({
     defaultTheme: readStoredThemePreference(),
     themes,
   },
+  defaults,
 })
 
 if ('serviceWorker' in navigator) {

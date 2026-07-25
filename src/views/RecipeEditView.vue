@@ -208,14 +208,14 @@ function save() {
           data-testid="recipe-labels"
         >
           <template #chip="{ props: chipProps }">
-            <v-chip v-bind="chipProps" color="primary" variant="tonal" />
+            <v-chip v-bind="chipProps" color="primary" />
           </template>
         </v-combobox>
 
         <h2 class="text-subtitle-1 font-weight-bold mb-2">Ingredients</h2>
         <template v-for="(row, index) in ingredientRows" :key="index">
           <v-divider v-if="index > 0" class="my-3" />
-          <div class="ingredient-row py-1">
+          <div class="py-1" data-testid="ingredient-row">
             <v-row density="compact">
               <v-col cols="3">
                 <v-text-field

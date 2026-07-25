@@ -1,7 +1,7 @@
 import { config } from '@vue/test-utils'
 import { createVuetify } from 'vuetify'
 import { aliases, mdi } from 'vuetify/iconsets/mdi-svg'
-import { themes } from './theme'
+import { defaults, themes } from './theme'
 
 // jsdom doesn't implement matchMedia, which Vuetify's theme uses to resolve
 // defaultTheme: 'system' from prefers-color-scheme. Must be defined before
@@ -26,8 +26,9 @@ config.global.plugins = [
       aliases,
       sets: { mdi },
     },
-    // Use the real themes so colour regressions are reachable from tests.
+    // Use the real themes and defaults so tests render what the app renders.
     theme: { defaultTheme: 'light', themes },
+    defaults,
   }),
 ]
 

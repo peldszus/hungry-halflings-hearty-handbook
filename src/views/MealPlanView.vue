@@ -124,7 +124,7 @@ function saveNote() {
   <v-container>
     <h1 class="text-h5 mb-2">Meal Plan</h1>
 
-    <div class="d-flex align-center mb-3 gap-2">
+    <div class="d-flex align-center mb-3 ga-2">
       <v-btn :icon="mdiChevronLeft" variant="tonal" size="small" @click="weekOffset--" />
       <span class="text-body-2 flex-grow-1 text-center">
         {{ weekDays[0].dateWithYear }} – {{ weekDays[6].dateWithYear }}
@@ -172,7 +172,6 @@ function saveNote() {
             :custom-filter="recipeFilter"
             placeholder="— No meal —"
             density="compact"
-            variant="outlined"
             hide-details
             clearable
             @update:model-value="(v: string | null) => onRecipeChange(day.iso, v)"
@@ -205,13 +204,7 @@ function saveNote() {
                   </div>
                 </template>
                 <div v-if="item.labels.length" class="d-flex flex-wrap ga-1 mt-1">
-                  <v-chip
-                    v-for="label in item.labels"
-                    :key="label"
-                    size="x-small"
-                    color="primary"
-                    variant="tonal"
-                  >
+                  <v-chip v-for="label in item.labels" :key="label" size="x-small" color="primary">
                     {{ label }}
                   </v-chip>
                 </div>
@@ -255,7 +248,7 @@ function saveNote() {
       </div>
     </div>
 
-    <v-dialog v-model="noteDialog" max-width="420">
+    <v-dialog v-model="noteDialog">
       <v-card>
         <v-card-title>{{ noteDialogTitle }}</v-card-title>
         <v-card-text>
@@ -265,7 +258,6 @@ function saveNote() {
             rows="3"
             auto-grow
             density="compact"
-            variant="outlined"
             hide-details
             autofocus
           />
@@ -305,13 +297,6 @@ function saveNote() {
 }
 .meal-btn--empty {
   cursor: default;
-}
-.search-match {
-  font-weight: 600;
-  background: rgba(var(--v-theme-primary), 0.15);
-}
-.last-used {
-  font-size: 0.6875rem;
 }
 .notes-row {
   margin-top: 2px;

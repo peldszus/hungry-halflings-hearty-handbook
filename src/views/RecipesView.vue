@@ -42,7 +42,6 @@ function lastUsedLabel(recipeId: string) {
       placeholder="Search by name"
       :prepend-inner-icon="mdiMagnify"
       density="compact"
-      variant="outlined"
       clearable
       hide-details
       class="mb-4"
@@ -77,21 +76,13 @@ function lastUsedLabel(recipeId: string) {
               size="small"
               class="ml-2"
             />
-            <v-chip v-if="recipe.archived" size="x-small" variant="tonal" class="ml-2"
-              >Archived</v-chip
-            >
+            <v-chip v-if="recipe.archived" size="x-small" class="ml-2">Archived</v-chip>
           </template>
           <template #subtitle>
             <span class="last-used text-disabled">{{ lastUsedLabel(recipe.id) }}</span>
           </template>
           <div v-if="(recipe.labels ?? []).length" class="d-flex flex-wrap ga-1 mt-1">
-            <v-chip
-              v-for="label in recipe.labels"
-              :key="label"
-              size="x-small"
-              color="primary"
-              variant="tonal"
-            >
+            <v-chip v-for="label in recipe.labels" :key="label" size="x-small" color="primary">
               {{ label }}
             </v-chip>
           </div>
@@ -115,12 +106,5 @@ function lastUsedLabel(recipeId: string) {
   position: fixed;
   bottom: 80px;
   right: 16px;
-}
-.search-match {
-  font-weight: 600;
-  background: rgba(var(--v-theme-primary), 0.15);
-}
-.last-used {
-  font-size: 0.6875rem;
 }
 </style>

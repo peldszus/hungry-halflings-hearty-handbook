@@ -117,7 +117,6 @@ defineExpose({
           accept=".json,application/json"
           :prepend-icon="mdiPaperclip"
           density="compact"
-          variant="outlined"
           :model-value="selectedFile"
           @update:model-value="
             (f) => {
@@ -127,12 +126,12 @@ defineExpose({
           "
         />
 
-        <v-alert v-if="importError" type="error" variant="tonal" data-testid="import-error">
+        <v-alert v-if="importError" type="error" data-testid="import-error">
           {{ importError }}
         </v-alert>
 
         <template v-if="fileStats">
-          <v-alert type="warning" variant="tonal" class="mb-4">
+          <v-alert type="warning" class="mb-4">
             Importing irreversibly replaces your entire database.
           </v-alert>
 
