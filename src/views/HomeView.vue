@@ -31,21 +31,14 @@ const nextMeal = computed(() => {
 
 /**
  * How far the plan reaches before its first hole — the cue for when to sit down and plan again.
- * `days` counts today plus each consecutive planned day after it, so 1 means "only today".
- * A relative phrase for the gap would collide with the card's own "Next meal · tomorrow", so the
- * gap is named by its weekday instead.
+ * Counts today plus each consecutive planned day after it, so 1 means "only today". Zero is
+ * phrased about today rather than as "nothing planned", which would be wrong when the gap is
+ * today but next week is full.
  */
-const coverage = computed(() => {
-  const { days, firstUnplannedDate } = mealPlanStore.getPlanningCoverage()
-  if (days === 0) return 'No meal planned for today'
-
-  const gap = new Date(`${firstUnplannedDate}T00:00:00`).toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  })
-  const reach = days === 1 ? 'Planned through today' : `Planned ${days} days ahead`
-  return `${reach} · next gap ${days === 1 ? 'tomorrow' : gap}`
+const plannedAhead = computed(() => {
+  const days = mealPlanStore.countPlannedDaysAhead()
+  if (days === 0) return "Today isn't planned"
+  return `${days} day${days === 1 ? '' : 's'} planned ahead`
 })
 
 const destinations = computed(() => [
@@ -60,7 +53,7 @@ const destinations = computed(() => [
     to: '/meal-plan',
     icon: mdiCalendarMonth,
     title: 'Meal Plan',
-    subtitle: pluralise(mealPlanStore.countUpcomingMeals(), 'upcoming meal', 'No meals planned'),
+    subtitle: plannedAhead.value,
     text: 'Assign recipes to days in your weekly plan.',
   },
   {
@@ -81,8 +74,8 @@ const destinations = computed(() => [
       Plan your meals, manage recipes, and build your shopping lists.
     </p>
 
-    <!-- Rendered even with nothing planned: the coverage line is exactly what the user needs to
-         see when the plan has run dry, so the card points at the meal plan instead. -->
+    <!-- Rendered even with nothing planned, where it becomes the prompt to go and plan rather
+         than disappearing and leaving the screen with no cue at all. -->
     <v-card
       class="mb-6"
       color="tertiary-container"
@@ -98,9 +91,6 @@ const destinations = computed(() => [
         </v-card-subtitle>
         <v-card-title class="text-body-1">{{ nextMeal?.name ?? 'Plan your week' }}</v-card-title>
       </v-card-item>
-      <v-card-text class="pt-0 text-caption" data-testid="planning-coverage">
-        {{ coverage }}
-      </v-card-text>
     </v-card>
 
     <v-row>

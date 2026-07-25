@@ -32,7 +32,7 @@ describe('HomeView', () => {
   })
 
   describe('navigation card counts', () => {
-    it('shows the recipe and upcoming-meal counts on the cards that navigate there', () => {
+    it('shows the recipe count and the planning streak on the cards that navigate there', () => {
       const recipes = useRecipesStore()
       const mealPlan = useMealPlanStore()
       const recipe = recipes.addRecipe({ name: 'Stew', ingredients: [], servings: 2 })
@@ -42,7 +42,7 @@ describe('HomeView', () => {
 
       const text = mountHome().text()
       expect(text).toContain('2 recipes')
-      expect(text).toContain('2 upcoming meals')
+      expect(text).toContain('2 days planned ahead')
     })
 
     it('uses the singular form for a single item', () => {
@@ -53,60 +53,45 @@ describe('HomeView', () => {
 
       const text = mountHome().text()
       expect(text).toContain('1 recipe')
-      expect(text).toContain('1 upcoming meal')
+      expect(text).toContain('1 day planned ahead')
     })
 
     it('reads as empty rather than zero when there is nothing yet', () => {
       const text = mountHome().text()
       expect(text).toContain('No recipes yet')
-      expect(text).toContain('No meals planned')
+      expect(text).toContain("Today isn't planned")
     })
 
-    it('excludes past meals from the meal plan count', () => {
-      const recipes = useRecipesStore()
-      const mealPlan = useMealPlanStore()
-      const recipe = recipes.addRecipe({ name: 'Stew', ingredients: [], servings: 2 })
-      mealPlan.assign(isoDaysFromToday(-3), recipe.id)
-      mealPlan.assign(isoDaysFromToday(2), recipe.id)
-
-      expect(mountHome().text()).toContain('1 upcoming meal')
-    })
-  })
-
-  describe('planning coverage', () => {
-    it('reports how many days ahead the plan reaches', () => {
+    it('counts a day with only a meal note towards the streak', () => {
       const recipes = useRecipesStore()
       const mealPlan = useMealPlanStore()
       const recipe = recipes.addRecipe({ name: 'Stew', ingredients: [], servings: 2 })
       mealPlan.assign(isoDaysFromToday(0), recipe.id)
-      mealPlan.assign(isoDaysFromToday(1), recipe.id)
+      mealPlan.setMealNote(isoDaysFromToday(1), 'Leftovers')
       mealPlan.assign(isoDaysFromToday(2), recipe.id)
 
-      const coverage = mountHome().get('[data-testid="planning-coverage"]').text()
-      expect(coverage).toContain('Planned 3 days ahead')
-      expect(coverage).toContain('next gap')
+      expect(mountHome().text()).toContain('3 days planned ahead')
     })
 
-    it('stops counting at the first unplanned day', () => {
+    it('stops the streak at the first gap, ignoring meals beyond it', () => {
       const recipes = useRecipesStore()
       const mealPlan = useMealPlanStore()
       const recipe = recipes.addRecipe({ name: 'Stew', ingredients: [], servings: 2 })
       mealPlan.assign(isoDaysFromToday(0), recipe.id)
+      // Tomorrow is the gap.
       mealPlan.assign(isoDaysFromToday(2), recipe.id)
+      mealPlan.assign(isoDaysFromToday(3), recipe.id)
 
-      const coverage = mountHome().get('[data-testid="planning-coverage"]').text()
-      expect(coverage).toBe('Planned through today · next gap tomorrow')
+      expect(mountHome().text()).toContain('1 day planned ahead')
     })
 
-    it('says nothing is planned for today when today has no meal', () => {
+    it('reports an unplanned today even when later days are planned', () => {
       const recipes = useRecipesStore()
       const mealPlan = useMealPlanStore()
       const recipe = recipes.addRecipe({ name: 'Stew', ingredients: [], servings: 2 })
       mealPlan.assign(isoDaysFromToday(1), recipe.id)
 
-      expect(mountHome().get('[data-testid="planning-coverage"]').text()).toBe(
-        'No meal planned for today'
-      )
+      expect(mountHome().text()).toContain("Today isn't planned")
     })
   })
 
@@ -130,8 +115,6 @@ describe('HomeView', () => {
       const card = wrapper.get('[data-testid="no-next-meal"]')
       expect(card.text()).toContain('Plan your week')
       expect(card.attributes('href')).toContain('/meal-plan')
-      // The coverage line is most useful precisely when the plan has run dry.
-      expect(card.text()).toContain('No meal planned for today')
     })
   })
 })

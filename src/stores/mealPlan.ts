@@ -97,11 +97,12 @@ export const useMealPlanStore = defineStore('mealPlan', () => {
   }
 
   /**
-   * Meals still ahead of the user — entries that actually name a recipe, from today onwards.
-   * Note-only entries are not meals, so they don't count.
+   * A day is planned once it says what is being eaten — either a recipe or a meal note
+   * ("leftovers", "eating out"). A day note describes the day itself, not the meal, so it
+   * leaves the day unplanned.
    */
-  function countUpcomingMeals(today: string = new Date().toISOString().slice(0, 10)): number {
-    return entries.value.filter((e) => e.recipeId && e.date >= today).length
+  function isPlanned(entry: MealPlanEntry): boolean {
+    return Boolean(entry.recipeId || entry.mealNote)
   }
 
   function nextIsoDate(iso: string): string {
@@ -111,16 +112,12 @@ export const useMealPlanStore = defineStore('mealPlan', () => {
   }
 
   /**
-   * How far the plan reaches without a hole in it: `days` is the unbroken run of days with a
-   * recipe assigned, starting at today (so 0 when today itself has no meal, 1 when only today
-   * does), and `firstUnplannedDate` is the day the run stops at — the day to plan from next.
-   * Days carrying only a note are not planned days.
+   * How far the plan reaches before its first hole: the unbroken run of planned days starting at
+   * today, so 0 means today itself is unplanned and 1 means only today is. Days planned beyond a
+   * gap don't count — the gap is where planning has to resume.
    */
-  function getPlanningCoverage(today: string = new Date().toISOString().slice(0, 10)): {
-    days: number
-    firstUnplannedDate: string
-  } {
-    const planned = new Set(entries.value.filter((e) => e.recipeId).map((e) => e.date))
+  function countPlannedDaysAhead(today: string = new Date().toISOString().slice(0, 10)): number {
+    const planned = new Set(entries.value.filter(isPlanned).map((e) => e.date))
     let days = 0
     let date = today
     // A year of lookahead is far past any useful planning horizon, and bounds the walk.
@@ -128,7 +125,7 @@ export const useMealPlanStore = defineStore('mealPlan', () => {
       days++
       date = nextIsoDate(date)
     }
-    return { days, firstUnplannedDate: date }
+    return days
   }
 
   function replaceAll(next: MealPlanEntry[]) {
@@ -147,7 +144,6 @@ export const useMealPlanStore = defineStore('mealPlan', () => {
     getForRange,
     getLastUsedDate,
     getNextPlannedDate,
-    countUpcomingMeals,
-    getPlanningCoverage,
+    countPlannedDaysAhead,
   }
 })
