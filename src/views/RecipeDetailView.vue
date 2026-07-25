@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   mdiArrowLeft,
@@ -57,14 +57,11 @@ function duplicateRecipe() {
   router.replace({ name: 'recipe-new', query: { duplicateFrom: recipe.value.id } })
 }
 
-const showDeleteDialog = ref(false)
-
-function confirmDeleteRecipe() {
-  showDeleteDialog.value = true
-}
-
+/**
+ * Deletes straight away rather than asking first. The undo snackbar makes this reversible, and
+ * Material confirms a reversible action after the fact instead of blocking it beforehand.
+ */
 function deleteRecipe() {
-  showDeleteDialog.value = false
   if (!recipe.value) return
 
   // Snapshot before removal so the undo action can restore it with its original id, which
@@ -196,7 +193,7 @@ function ingredientLabel(ingredient: Ingredient) {
               title="Delete"
               base-color="error"
               data-testid="delete-recipe"
-              @click="confirmDeleteRecipe"
+              @click="deleteRecipe"
             />
           </v-list>
         </v-menu>
@@ -263,19 +260,5 @@ function ingredientLabel(ingredient: Ingredient) {
     </template>
 
     <p v-else class="text-body-2 text-medium-emphasis font-italic">Recipe not found.</p>
-
-    <v-dialog v-model="showDeleteDialog" max-width="400">
-      <v-card>
-        <v-card-title>Delete recipe?</v-card-title>
-        <v-card-text>This can't be undone.</v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn variant="text" @click="showDeleteDialog = false">Cancel</v-btn>
-          <v-btn color="error" variant="text" data-testid="confirm-delete" @click="deleteRecipe">
-            Delete
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
   </v-container>
 </template>

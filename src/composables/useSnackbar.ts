@@ -24,10 +24,14 @@ export function useSnackbar() {
   /**
    * Confirms a reversible action and offers to undo it — Material's answer to destructive
    * actions. Running the undo handler dismisses the snackbar.
+   *
+   * Given a longer window than a plain notification: for actions like deleting a recipe this
+   * snackbar is the only chance to reverse the change, since there is no confirmation step.
    */
   function showUndo(text: string, undo: () => void) {
     show({
       text,
+      timeout: 10000,
       action: {
         label: 'Undo',
         handler: () => {

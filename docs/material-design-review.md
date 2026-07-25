@@ -300,10 +300,31 @@ The screen still inherits the new theme, type scale and component defaults autom
 
 ## 6. Cross-cutting
 
-**Snackbars.** There is no transient feedback anywhere. Destructive and semi-destructive actions
-(delete, archive, import-overwrite) should confirm via a snackbar with an **Undo** action — the M3
-pattern. The delete confirmation dialog should stay, because deletion is genuinely irreversible here
-with no server-side history, but archive does not need one.
+**Snackbars.** There is no transient feedback anywhere. Destructive and semi-destructive actions —
+delete, archive and unarchive — confirm via a snackbar with an **Undo** action, the M3 pattern.
+
+Undo replaces the delete confirmation dialog rather than sitting alongside it. The dialog existed
+only because deletion was irreversible; once `restoreRecipe` can put a recipe back with its original
+id, the dialog interrupts every delete to warn about a consequence that no longer applies, and its
+"This can't be undone" copy is simply wrong. Material's model is to confirm a reversible action
+after the fact, not to block it beforehand.
+
+Two consequences of that are worth stating plainly, because the snackbar is now the only guard:
+
+- Undo is a _compensating write_, not a deferred commit. `removeRecipe` writes to localStorage
+  immediately and `restoreRecipe` writes again; nothing is held in a pending state. So a reload
+  inside the undo window loses the chance to undo, because the snapshot is in memory while the
+  deletion is already on disk.
+- Raising a second snackbar within the window replaces the first and discards its undo. That is
+  Material's own one-at-a-time model, and in practice deleting navigates you away from the recipe,
+  so reaching another destructive action inside the window takes deliberate effort. A message
+  queue in `useSnackbar` would close it if that ever proves wrong.
+
+Undo-bearing messages get a longer timeout (10s) than plain notifications (6s) for this reason.
+
+Import-overwrite is _not_ covered by a snackbar — `DataTransferMenu.vue` does not raise one. It
+still guards itself with an explicit warning and a confirm step in its dialog, which is the right
+treatment since that action is genuinely irreversible.
 
 **Empty states.** Four bare italic strings stand in for empty states. A shared component with an
 icon, headline, supporting text and a primary action is both better UX and less duplication.

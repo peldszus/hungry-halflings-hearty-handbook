@@ -7,6 +7,7 @@ import RecipeDetailView from './RecipeDetailView.vue'
 import RecipeEditView from './RecipeEditView.vue'
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
+import { useSnackbar } from '@/composables/useSnackbar'
 
 // Unmount mounted components after each test so teleported dialog DOM doesn't leak across tests.
 enableAutoUnmount(afterEach)
@@ -138,9 +139,11 @@ describe('RecipeDetailView actions', () => {
   beforeEach(() => {
     localStorage.clear()
     setActivePinia(createPinia())
+    // Snackbar state is module-level and shared, so a pending message would leak across tests.
+    useSnackbar().dismiss()
   })
 
-  it('shows a confirmation dialog and only deletes the recipe once confirmed', async () => {
+  it('deletes immediately without asking for confirmation first', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useRecipesStore()
@@ -158,44 +161,40 @@ describe('RecipeDetailView actions', () => {
     const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
     await clickMenuAction(wrapper, 'delete-recipe')
 
-    expect(store.getById(id)).toBeDefined()
-    expect(router.currentRoute.value.name).toBe('recipe-detail')
-    expect(document.body.textContent).toContain('Delete recipe?')
-
-    const confirmBtn = document.querySelector<HTMLElement>('[data-testid="confirm-delete"]')
-    confirmBtn?.click()
-
-    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('recipes'))
+    expect(document.body.textContent).not.toContain('Delete recipe?')
     expect(store.getById(id)).toBeUndefined()
+    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('recipes'))
   })
 
-  it('keeps the recipe when the delete confirmation is cancelled', async () => {
+  it('offers an undo that restores the recipe with its original id', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useRecipesStore()
     store.addRecipe({
       name: 'Pasta',
-      ingredients: [{ ingredient: 'pasta', isMain: false, addToShoppingList: true }],
+      ingredients: [{ ingredient: 'pasta', isMain: true, addToShoppingList: true }],
+      labels: ['dinner'],
       servings: 2,
     })
-    const id = store.recipes[0].id
+    const original = { ...store.recipes[0] }
 
     const router = makeRouter()
-    router.push({ name: 'recipe-detail', params: { id } })
+    router.push({ name: 'recipe-detail', params: { id: original.id } })
     await router.isReady()
 
     const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
     await clickMenuAction(wrapper, 'delete-recipe')
 
-    expect(document.body.textContent).toContain('Delete recipe?')
-    const cancelButton = Array.from(document.querySelectorAll<HTMLElement>('button')).find((b) =>
-      b.textContent?.includes('Cancel')
-    )
-    cancelButton?.click()
-    await flushPromises()
+    // The snackbar host lives in App.vue, which this test does not mount, so assert against
+    // the composable that drives it.
+    const { current } = useSnackbar()
+    expect(current.value?.text).toContain('Pasta')
+    expect(current.value?.action?.label).toBe('Undo')
 
-    expect(store.getById(id)).toBeDefined()
-    expect(router.currentRoute.value.name).toBe('recipe-detail')
+    current.value?.action?.handler()
+
+    // Restoring the original id is what keeps meal-plan entries resolving.
+    expect(store.getById(original.id)).toEqual(original)
   })
 
   it('archives and unarchives the recipe', async () => {
