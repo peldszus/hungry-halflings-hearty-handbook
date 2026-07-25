@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Hungry Halflings Hearty Handbook">
+  <title>Hungry Halflings Hearty Handbook</title>
+  <!--
+    Source artwork for every app icon. The PNG variants in this folder are rendered from it.
+    Colours are the Material 3 primary-container / on-primary-container pair from src/theme.ts.
+  -->
+  <rect width="512" height="512" rx="112" fill="#AFF0C9" />
+
+  <g fill="#00210F">
+    <!-- Steam -->
+    <path
+      d="M196 116c0-20 22-24 22-42 0-10-6-17-6-17s26 8 26 28c0 20-22 25-22 42 0 9 5 15 5 15s-25-8-25-26z"
+      opacity=".55"
+    />
+    <path
+      d="M272 104c0-17 19-21 19-36 0-9-5-15-5-15s23 7 23 24c0 18-19 22-19 37 0 8 4 13 4 13s-22-7-22-23z"
+      opacity=".55"
+    />
+
+    <!-- Lid -->
+    <rect x="118" y="196" width="276" height="34" rx="17" />
+    <rect x="240" y="170" width="32" height="26" rx="13" />
+
+    <!-- Pot body with handles -->
+    <path
+      d="M146 250h220a8 8 0 0 1 8 8v52c0 62-50 112-112 112h-12c-62 0-112-50-112-112v-52a8 8 0 0 1 8-8z"
+    />
+    <path
+      d="M138 268H98a30 30 0 0 0 0 60h40v-30H108a4 4 0 0 1 0-8h30z"
+    />
+    <path
+      d="M374 268h40a30 30 0 0 1 0 60h-40v-30h30a4 4 0 0 0 0-8h-30z"
+    />
+  </g>
+</svg>

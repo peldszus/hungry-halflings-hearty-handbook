@@ -1,0 +1,1 @@
+.fab[data-v-5fe64e9a]{position:fixed;bottom:calc(var(--v-layout-bottom, 0px) + 16px + env(safe-area-inset-bottom,0px));right:16px;transition:bottom .2s cubic-bezier(.2,0,0,1)}.fab--raised[data-v-5fe64e9a]{bottom:calc(var(--v-layout-bottom, 0px) + 80px + env(safe-area-inset-bottom,0px))}@media (prefers-reduced-motion: reduce){.fab[data-v-5fe64e9a]{transition:none}}
