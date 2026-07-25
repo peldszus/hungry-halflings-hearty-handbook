@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import DataTransferMenu from './DataTransferMenu.vue'
+import AppMenu from './AppMenu.vue'
 import { useRecipesStore, type Recipe } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
 import { buildBackup } from '@/utils/dataTransfer'
@@ -31,10 +31,10 @@ function fileFromText(text: string): File {
 function mountMenu() {
   const pinia = createPinia()
   setActivePinia(pinia)
-  return mount(DataTransferMenu, { global: { plugins: [pinia] } })
+  return mount(AppMenu, { global: { plugins: [pinia] } })
 }
 
-describe('DataTransferMenu', () => {
+describe('AppMenu', () => {
   beforeEach(() => {
     localStorage.clear()
     setActivePinia(createPinia())

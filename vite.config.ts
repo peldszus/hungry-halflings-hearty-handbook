@@ -12,21 +12,41 @@ export default defineConfig({
     vuetify({ autoImport: true }),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'pwa-192.png', 'pwa-512.png'],
+      includeAssets: ['icon.svg', 'favicon-96.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'Hungry Halflings Hearty Handbook',
         short_name: 'MealPlanner',
         description: 'Plan meals, manage recipes, and build shopping lists',
-        theme_color: '#4a9c6f',
-        background_color: '#ffffff',
+        // Matches the light theme's surface colour from src/theme.ts.
+        theme_color: '#F6FBF4',
+        background_color: '#F6FBF4',
         display: 'standalone',
+        orientation: 'portrait',
+        start_url: '.',
+        scope: '.',
+        categories: ['food', 'lifestyle', 'productivity'],
         icons: [
           { src: 'pwa-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'pwa-512.png', sizes: '512x512', type: 'image/png' },
+          // Without a maskable icon Android crops the square artwork inside its
+          // adaptive-icon mask.
+          {
+            src: 'pwa-maskable-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+        ],
+        shortcuts: [
+          { name: 'Recipes', url: '#/recipes' },
+          { name: 'Meal Plan', url: '#/meal-plan' },
+          { name: 'Shopping List', url: '#/shopping-list' },
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        // woff2 must be listed or the self-hosted Roboto is not precached and the app
+        // falls back to a system font when offline.
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
       },
     }),
   ],

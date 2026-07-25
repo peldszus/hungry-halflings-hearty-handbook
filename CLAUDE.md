@@ -7,6 +7,8 @@ shopping lists for any date range.
 
 - **Vue 3** with Composition API + `<script setup>`
 - **TypeScript** — strict mode
+- **Vuetify 4** — Material Design 3 component library (auto-imported via `vite-plugin-vuetify`)
+- **@mdi/js** — Material Design icons as tree-shaken SVG paths (never the icon font)
 - **Vite** — build tool and dev server
 - **Pinia** — state management (recipes, meal plan, shopping list)
 - **Vue Router** — hash history (required for GitHub Pages)
@@ -33,21 +35,53 @@ shopping lists for any date range.
 
 ```
 src/
-  main.ts              # App entry point
-  App.vue              # Root component (NavBar + RouterView)
+  main.ts              # App entry point — Vuetify, Pinia and router wiring
+  App.vue              # Root component (v-app > NavBar + RouterView)
   router/index.ts      # Route definitions (hash history)
   stores/
-    recipes.ts         # Pinia store: recipe CRUD
-    mealPlan.ts        # Pinia store: date → recipe assignments
-    shoppingList.ts    # Pinia store: derived ingredient list
+    recipes.ts         # Pinia store: recipe CRUD (localStorage key 'recipes')
+    mealPlan.ts        # Pinia store: date → recipe assignments (key 'mealPlan')
+    shoppingList.ts    # Pinia store: derived ingredient list (not persisted)
   views/
     HomeView.vue       # Dashboard with summary counts
-    RecipesView.vue    # Recipe list and add/remove
-    MealPlanView.vue   # Week calendar with recipe assignment
+    RecipesView.vue    # Recipe list, search and add
+    RecipeDetailView.vue  # Single recipe: actions, metadata, ingredients
+    RecipeEditView.vue    # Add/edit recipe form (also used for /recipes/new)
+    MealPlanView.vue      # Week calendar with recipe assignment and notes
     ShoppingListView.vue  # Date range + ingredient list
   components/
-    NavBar.vue         # Top navigation
+    NavBar.vue         # Top app bar + bottom navigation
+    AppMenu.vue        # App bar overflow menu: theme options, export/import
+    ThemeMenuItems.vue # Theme preference list items, rendered inside AppMenu
+  utils/
+    dataTransfer.ts    # Export/import serialisation and validation
+    highlight.ts       # Search-term highlighting
+    relativeTime.ts    # "3 days ago" style formatting
 ```
+
+Tests are colocated next to their source as `*.test.ts`.
+
+## Design System
+
+The app follows Material Design 3 via Vuetify 4. See
+[`docs/material-design-review.md`](docs/material-design-review.md) for the full design review and
+the reasoning behind the token choices.
+
+- **`src/theme.ts` is the single source of truth** for colours, theme variables and component
+  defaults. Do not add inline `variant`/`density`/`rounded` props that duplicate a global default,
+  and do not hard-code colours in component styles — use theme tokens.
+- **Vuetify's `surface-variant` is M3's `inverse-surface`**, not M3's neutral surface variant.
+  Vuetify uses it for snackbar, slider track and `solo-inverted` field backgrounds, so it holds a
+  _dark_ value in the light theme. M3's neutral surfaces are exposed as `surface-container-*`.
+- Icons come from `@mdi/js` as individual path imports (`import { mdiPlus } from '@mdi/js'`).
+  Never switch to `@mdi/font` or Material Symbols — the SVG paths are tree-shaken and the font
+  is not.
+- Colour is semantic. Headings use `on-surface`, not `text-primary`.
+- `public/icon.svg` is the source for every app icon; the PNGs beside it are rendered from it.
+  See the design review for sizes and the maskable safe-zone requirement.
+- The brand colour lives in three places that must stay in sync: `src/theme.ts` (the source of
+  truth), `index.html`'s `theme-color` meta, and the PWA manifest in `vite.config.ts`. The meta
+  tag is updated at runtime by `useAppTheme` so it follows dark mode.
 
 ## Quality Gates
 

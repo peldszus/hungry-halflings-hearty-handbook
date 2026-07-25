@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { mdiDotsVertical, mdiDownload, mdiUpload, mdiPaperclip } from '@mdi/js'
+import ThemeMenuItems from './ThemeMenuItems.vue'
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
 import {
@@ -90,9 +91,15 @@ defineExpose({
 <template>
   <v-menu>
     <template #activator="{ props }">
-      <v-btn :icon="mdiDotsVertical" v-bind="props" aria-label="Data menu" />
+      <v-btn :icon="mdiDotsVertical" v-bind="props" aria-label="Menu" />
     </template>
-    <v-list>
+    <v-list density="compact">
+      <v-list-subheader>Theme</v-list-subheader>
+      <ThemeMenuItems />
+
+      <v-divider class="my-1" />
+
+      <v-list-subheader>Data</v-list-subheader>
       <v-list-item
         :prepend-icon="mdiDownload"
         title="Export data"
@@ -117,7 +124,6 @@ defineExpose({
           accept=".json,application/json"
           :prepend-icon="mdiPaperclip"
           density="compact"
-          variant="outlined"
           :model-value="selectedFile"
           @update:model-value="
             (f) => {
@@ -127,12 +133,12 @@ defineExpose({
           "
         />
 
-        <v-alert v-if="importError" type="error" variant="tonal" data-testid="import-error">
+        <v-alert v-if="importError" type="error" data-testid="import-error">
           {{ importError }}
         </v-alert>
 
         <template v-if="fileStats">
-          <v-alert type="warning" variant="tonal" class="mb-4">
+          <v-alert type="warning" class="mb-4">
             Importing irreversibly replaces your entire database.
           </v-alert>
 

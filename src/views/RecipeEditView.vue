@@ -114,10 +114,23 @@ async function addIngredientRow() {
   await nextTick()
   const btn = addIngredientBtnRef.value?.$el as HTMLElement | undefined
   if (!btn) return
-  const bottomNav = document.querySelector('.v-bottom-navigation')
-  const bottomNavHeight = bottomNav?.getBoundingClientRect().height ?? 0
-  btn.style.scrollMarginBottom = `${bottomNavHeight + 16}px`
   btn.scrollIntoView?.({ behavior: 'smooth', block: 'end' })
+}
+
+/**
+ * The Main / Shop toggles are rendered as a chip group, which models selection as a list of
+ * values, so the two booleans are projected in and out of that shape.
+ */
+function rowFlags(row: { isMain: boolean; addToShoppingList: boolean }) {
+  const flags: string[] = []
+  if (row.isMain) flags.push('main')
+  if (row.addToShoppingList) flags.push('shop')
+  return flags
+}
+
+function setRowFlags(row: { isMain: boolean; addToShoppingList: boolean }, flags: string[]) {
+  row.isMain = flags.includes('main')
+  row.addToShoppingList = flags.includes('shop')
 }
 
 function removeIngredientRow(index: number) {
@@ -181,7 +194,7 @@ function save() {
     </v-btn>
 
     <template v-if="!notFound">
-      <h1 class="text-h5 text-primary mb-4">
+      <h1 class="text-h6 mb-4">
         {{ isEditMode ? 'Edit Recipe' : 'Add Recipe' }}
       </h1>
 
@@ -208,14 +221,16 @@ function save() {
           data-testid="recipe-labels"
         >
           <template #chip="{ props: chipProps }">
-            <v-chip v-bind="chipProps" color="primary" variant="tonal" />
+            <v-chip v-bind="chipProps" color="primary" />
           </template>
         </v-combobox>
 
         <h2 class="text-subtitle-1 font-weight-bold mb-2">Ingredients</h2>
         <template v-for="(row, index) in ingredientRows" :key="index">
-          <v-divider v-if="index > 0" class="my-3" />
-          <div class="ingredient-row py-1">
+          <!-- Each ingredient is its own tonal surface rather than divider-separated rows: on a
+               phone the previous layout crammed a 3/3/6 grid, two compact checkboxes and a
+               delete button onto one line, all below the 48dp touch target minimum. -->
+          <v-card variant="tonal" class="mb-3 pa-3" data-testid="ingredient-row">
             <v-row density="compact">
               <v-col cols="3">
                 <v-text-field
@@ -251,38 +266,38 @@ function save() {
                 />
               </v-col>
             </v-row>
-            <div class="d-flex align-center ga-4">
-              <v-checkbox
-                v-model="row.isMain"
-                label="Main"
-                hide-details
-                density="compact"
-                class="text-caption flex-grow-0"
-              />
-              <v-checkbox
-                v-model="row.addToShoppingList"
-                label="Shop"
-                hide-details
-                density="compact"
-                class="text-caption flex-grow-0"
-              />
+            <div class="d-flex align-center ga-2">
+              <!-- Filter chips rather than compact checkboxes: larger targets, and the M3
+                   pattern for a small set of independent toggles. -->
+              <v-chip-group
+                :model-value="rowFlags(row)"
+                multiple
+                filter
+                class="pa-0"
+                @update:model-value="(flags) => setRowFlags(row, flags as string[])"
+              >
+                <v-chip value="main" data-testid="ingredient-main">Main</v-chip>
+                <v-chip value="shop" data-testid="ingredient-shop">Shop</v-chip>
+              </v-chip-group>
               <v-spacer />
               <v-btn
                 :icon="mdiDelete"
-                size="x-small"
+                size="small"
                 variant="text"
                 color="error"
+                :aria-label="`Remove ingredient ${index + 1}`"
+                data-testid="remove-ingredient"
                 @click="removeIngredientRow(index)"
               />
             </div>
-          </div>
+          </v-card>
         </template>
 
         <v-btn
           ref="addIngredientBtnRef"
           variant="tonal"
           :prepend-icon="mdiPlus"
-          class="mb-4"
+          class="mb-4 add-ingredient-btn"
           @click="addIngredientRow"
         >
           Add ingredient
@@ -302,7 +317,11 @@ function save() {
           type="url"
           data-testid="recipe-url"
         />
-        <v-btn type="submit" color="primary" block>Save</v-btn>
+        <!-- Sticky so Save stays reachable on a long ingredient list instead of requiring a
+             scroll to the bottom of the form. -->
+        <div class="save-bar">
+          <v-btn type="submit" color="primary" block size="large">Save</v-btn>
+        </div>
       </v-form>
     </template>
 
@@ -323,3 +342,27 @@ function save() {
     </v-dialog>
   </v-container>
 </template>
+
+<style scoped>
+/* Keeps the button clear of the bottom navigation when a new row scrolls it into view.
+   --v-layout-bottom is published by Vuetify's layout and tracks whatever bottom chrome is
+   mounted, so this stays correct when the layout switches to a rail or drawer. */
+.add-ingredient-btn {
+  scroll-margin-bottom: calc(var(--v-layout-bottom, 0px) + 16px);
+}
+
+.save-bar {
+  position: sticky;
+  /* Flush against the bottom navigation — any offset here shows a strip of page background
+     through the gap. */
+  bottom: var(--v-layout-bottom, 0px);
+  z-index: 2;
+  padding-block: 12px;
+  /* v-container pads 16px at every breakpoint; cancel it so the opaque background spans the
+     full width instead of leaving the page showing down both sides. */
+  margin-inline: -16px;
+  padding-inline: 16px;
+  /* Opaque, so form fields scrolling underneath don't show through. */
+  background: rgb(var(--v-theme-surface));
+}
+</style>

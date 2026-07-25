@@ -8,15 +8,20 @@ import {
   mdiPencil,
   mdiStar,
   mdiNoteTextOutline,
+  mdiPlus,
 } from '@mdi/js'
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
 import { highlightInfixMatches } from '@/utils/highlight'
+import { useSnackbar } from '@/composables/useSnackbar'
 import { formatAssignmentUsageLines } from '@/utils/relativeTime'
 
 const router = useRouter()
 const recipesStore = useRecipesStore()
 const mealPlanStore = useMealPlanStore()
+
+// Material lifts the FAB out of the way while a snackbar is showing.
+const { visible: snackbarVisible } = useSnackbar()
 
 const weekOffset = ref(0)
 const editMode = ref(false)
@@ -25,6 +30,8 @@ const searchText = ref('')
 watch(weekOffset, () => {
   editMode.value = false
 })
+
+const todayIso = new Date().toISOString().slice(0, 10)
 
 const weekDays = computed(() => {
   const today = new Date()
@@ -122,26 +129,35 @@ function saveNote() {
 
 <template>
   <v-container>
-    <h1 class="text-h6 text-primary mb-2">Meal Plan</h1>
+    <h1 class="text-h5 mb-2">Meal Plan</h1>
 
-    <div class="d-flex align-center mb-3 gap-2">
-      <v-btn :icon="mdiChevronLeft" variant="tonal" size="small" @click="weekOffset--" />
+    <div class="d-flex align-center mb-3 ga-2">
+      <v-btn
+        :icon="mdiChevronLeft"
+        variant="tonal"
+        size="small"
+        aria-label="Previous week"
+        @click="weekOffset--"
+      />
       <span class="text-body-2 flex-grow-1 text-center">
         {{ weekDays[0].dateWithYear }} – {{ weekDays[6].dateWithYear }}
       </span>
-      <v-btn :icon="mdiChevronRight" variant="tonal" size="small" @click="weekOffset++" />
       <v-btn
-        :icon="editMode ? mdiCheck : mdiPencil"
-        class="ml-2"
-        :color="editMode ? 'primary' : undefined"
+        :icon="mdiChevronRight"
         variant="tonal"
         size="small"
-        @click="editMode = !editMode"
+        aria-label="Next week"
+        @click="weekOffset++"
       />
     </div>
 
     <div class="meal-plan-list">
-      <div v-for="day in weekDays" :key="day.iso" class="meal-plan-row">
+      <div
+        v-for="day in weekDays"
+        :key="day.iso"
+        class="meal-plan-row"
+        :class="{ 'meal-plan-row--today': day.iso === todayIso }"
+      >
         <div class="row-grid">
           <div class="day-label">
             <span class="font-weight-bold text-body-2">{{ day.weekday }}</span>
@@ -149,17 +165,22 @@ function saveNote() {
           </div>
 
           <template v-if="!editMode">
+            <!-- An empty day now offers to fill itself rather than rendering as a
+                 disabled-looking blank button. -->
             <v-btn
               variant="tonal"
               density="compact"
               class="meal-btn"
               :class="{ 'meal-btn--empty': !day.recipe }"
-              :ripple="!!day.recipe"
+              :color="day.recipe ? undefined : 'primary'"
+              :prepend-icon="day.recipe ? undefined : mdiPlus"
               @click="
-                day.recipe && router.push({ name: 'recipe-detail', params: { id: day.recipe.id } })
+                day.recipe
+                  ? router.push({ name: 'recipe-detail', params: { id: day.recipe.id } })
+                  : (editMode = true)
               "
             >
-              {{ day.recipe?.name }}
+              <span class="meal-btn__label">{{ day.recipe?.name ?? 'Add meal' }}</span>
             </v-btn>
           </template>
 
@@ -172,7 +193,6 @@ function saveNote() {
             :custom-filter="recipeFilter"
             placeholder="— No meal —"
             density="compact"
-            variant="outlined"
             hide-details
             clearable
             @update:model-value="(v: string | null) => onRecipeChange(day.iso, v)"
@@ -205,13 +225,7 @@ function saveNote() {
                   </div>
                 </template>
                 <div v-if="item.labels.length" class="d-flex flex-wrap ga-1 mt-1">
-                  <v-chip
-                    v-for="label in item.labels"
-                    :key="label"
-                    size="x-small"
-                    color="primary"
-                    variant="tonal"
-                  >
+                  <v-chip v-for="label in item.labels" :key="label" size="x-small" color="primary">
                     {{ label }}
                   </v-chip>
                 </div>
@@ -255,7 +269,7 @@ function saveNote() {
       </div>
     </div>
 
-    <v-dialog v-model="noteDialog" max-width="420">
+    <v-dialog v-model="noteDialog">
       <v-card>
         <v-card-title>{{ noteDialogTitle }}</v-card-title>
         <v-card-text>
@@ -265,7 +279,6 @@ function saveNote() {
             rows="3"
             auto-grow
             density="compact"
-            variant="outlined"
             hide-details
             autofocus
           />
@@ -281,6 +294,22 @@ function saveNote() {
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Editing the week is this screen's primary action, so it sits where Recipes puts its own:
+         a bottom-right FAB. Confirming an edit uses the same position rather than sending the
+         user back up to a toolbar. -->
+    <v-btn
+      :icon="editMode ? mdiCheck : mdiPencil"
+      color="primary"
+      class="fab"
+      :class="{ 'fab--raised': snackbarVisible }"
+      size="large"
+      elevation="4"
+      :aria-label="editMode ? 'Done editing meal plan' : 'Edit meal plan'"
+      :aria-pressed="editMode"
+      data-testid="toggle-edit-mode"
+      @click="editMode = !editMode"
+    />
   </v-container>
 </template>
 
@@ -291,9 +320,19 @@ function saveNote() {
 .meal-plan-row {
   min-height: 40px;
 }
+/* Today is the row users look for first, so it gets a tonal container behind it. */
+.meal-plan-row--today {
+  background: rgba(var(--v-theme-primary-container), 0.6);
+  border-radius: 12px;
+  margin-inline: -8px;
+  padding-inline: 8px;
+  padding-block: 4px;
+}
 .row-grid {
   display: grid;
-  grid-template-columns: 84px 1fr;
+  /* minmax(0, 1fr) rather than 1fr: a 1fr track's automatic minimum is its content size, so the
+     column would refuse to shrink and a long recipe name pushed past the row. */
+  grid-template-columns: 84px minmax(0, 1fr);
   align-items: center;
   column-gap: 12px;
 }
@@ -302,16 +341,24 @@ function saveNote() {
 }
 .meal-btn {
   justify-content: flex-start;
+  /* Overrides VBtn's size-derived min-width so the button can shrink with its column. */
+  min-width: 0;
+}
+/* .v-btn__content is a flex container that centres its children, so text-overflow can never
+   apply to it — a long name would overflow both edges and get clipped mid-word. Let it shrink
+   and align left; the truncation happens on the label span inside it. */
+.meal-btn :deep(.v-btn__content) {
+  min-width: 0;
+  justify-content: flex-start;
+}
+.meal-btn__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .meal-btn--empty {
-  cursor: default;
-}
-.search-match {
-  font-weight: 600;
-  background: rgba(var(--v-theme-primary), 0.15);
-}
-.last-used {
-  font-size: 0.6875rem;
+  opacity: 0.75;
 }
 .notes-row {
   margin-top: 2px;
