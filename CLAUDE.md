@@ -76,6 +76,11 @@ the reasoning behind the token choices.
   Never switch to `@mdi/font` or Material Symbols — the SVG paths are tree-shaken and the font
   is not.
 - Colour is semantic. Headings use `on-surface`, not `text-primary`.
+- `public/icon.svg` is the source for every app icon; the PNGs beside it are rendered from it.
+  See the design review for sizes and the maskable safe-zone requirement.
+- The brand colour lives in three places that must stay in sync: `src/theme.ts` (the source of
+  truth), `index.html`'s `theme-color` meta, and the PWA manifest in `vite.config.ts`. The meta
+  tag is updated at runtime by `useAppTheme` so it follows dark mode.
 
 ## Quality Gates
 

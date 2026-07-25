@@ -331,6 +331,26 @@ of these is what unlocks the richer install prompt.
 
 `theme_color` should track the new M3 surface colour and follow dark mode at runtime.
 
+### Regenerating the icons
+
+`public/icon.svg` is the source artwork — a cooking pot in the M3
+`primary-container` / `on-primary-container` pair. Every PNG in `public/` is rendered from it:
+
+| File                   | Size | Notes                                                                                                         |
+| ---------------------- | ---- | ------------------------------------------------------------------------------------------------------------- |
+| `pwa-192.png`          | 192  | manifest                                                                                                      |
+| `pwa-512.png`          | 512  | manifest                                                                                                      |
+| `pwa-maskable-512.png` | 512  | `purpose: maskable`; full-bleed background, artwork scaled to 72% so it survives Android's adaptive-icon crop |
+| `apple-touch-icon.png` | 180  | iOS home screen                                                                                               |
+| `favicon-96.png`       | 96   | PNG fallback for the SVG favicon                                                                              |
+
+To regenerate after editing the SVG, rasterise it at each size against a transparent
+background. Any renderer works; there is deliberately no build-time dependency for this, since
+it runs once per artwork change rather than per build.
+
+`favicon.ico` was dropped in favour of an SVG favicon with a PNG fallback — the old file was a
+101-byte 16×16 placeholder.
+
 ---
 
 ## Implementation order
