@@ -96,6 +96,38 @@ export const useMealPlanStore = defineStore('mealPlan', () => {
     return dates.length ? dates.sort()[0] : undefined
   }
 
+  /**
+   * A day is planned once it says what is being eaten — either a recipe or a meal note
+   * ("leftovers", "eating out"). A day note describes the day itself, not the meal, so it
+   * leaves the day unplanned.
+   */
+  function isPlanned(entry: MealPlanEntry): boolean {
+    return Boolean(entry.recipeId || entry.mealNote)
+  }
+
+  function nextIsoDate(iso: string): string {
+    return new Date(new Date(`${iso}T00:00:00Z`).getTime() + 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10)
+  }
+
+  /**
+   * How far the plan reaches before its first hole: the unbroken run of planned days starting at
+   * today, so 0 means today itself is unplanned and 1 means only today is. Days planned beyond a
+   * gap don't count — the gap is where planning has to resume.
+   */
+  function countPlannedDaysAhead(today: string = new Date().toISOString().slice(0, 10)): number {
+    const planned = new Set(entries.value.filter(isPlanned).map((e) => e.date))
+    let days = 0
+    let date = today
+    // A year of lookahead is far past any useful planning horizon, and bounds the walk.
+    while (planned.has(date) && days < 366) {
+      days++
+      date = nextIsoDate(date)
+    }
+    return days
+  }
+
   function replaceAll(next: MealPlanEntry[]) {
     entries.value = next
     save(entries.value)
@@ -112,5 +144,6 @@ export const useMealPlanStore = defineStore('mealPlan', () => {
     getForRange,
     getLastUsedDate,
     getNextPlannedDate,
+    countPlannedDaysAhead,
   }
 })

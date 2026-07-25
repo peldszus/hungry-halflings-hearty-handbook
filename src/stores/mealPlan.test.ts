@@ -230,4 +230,81 @@ describe('mealPlan store', () => {
       expect(store.getForDate('2026-06-14')).toBeUndefined()
     })
   })
+
+  describe('countPlannedDaysAhead', () => {
+    const today = '2026-06-14'
+
+    it('is zero when today itself is unplanned', () => {
+      const store = useMealPlanStore()
+      store.assign('2026-06-15', 'recipe-1')
+      expect(store.countPlannedDaysAhead(today)).toBe(0)
+    })
+
+    it('counts an unbroken run starting today', () => {
+      const store = useMealPlanStore()
+      store.assign(today, 'recipe-1')
+      store.assign('2026-06-15', 'recipe-2')
+      store.assign('2026-06-16', 'recipe-3')
+      expect(store.countPlannedDaysAhead(today)).toBe(3)
+    })
+
+    it('counts today alone', () => {
+      const store = useMealPlanStore()
+      store.assign(today, 'recipe-1')
+      expect(store.countPlannedDaysAhead(today)).toBe(1)
+    })
+
+    it('stops at the first gap and ignores meals planned beyond it', () => {
+      const store = useMealPlanStore()
+      store.assign(today, 'recipe-1')
+      store.assign('2026-06-15', 'recipe-2')
+      // 2026-06-16 is the gap.
+      store.assign('2026-06-17', 'recipe-3')
+      store.assign('2026-06-18', 'recipe-4')
+      expect(store.countPlannedDaysAhead(today)).toBe(2)
+    })
+
+    it('treats a day with only a meal note as planned', () => {
+      const store = useMealPlanStore()
+      store.assign(today, 'recipe-1')
+      store.setMealNote('2026-06-15', 'Leftovers')
+      store.assign('2026-06-16', 'recipe-2')
+      expect(store.countPlannedDaysAhead(today)).toBe(3)
+    })
+
+    it('does not treat a day with only a day note as planned', () => {
+      const store = useMealPlanStore()
+      store.assign(today, 'recipe-1')
+      store.setDayNote('2026-06-15', "Mother's birthday")
+      store.assign('2026-06-16', 'recipe-2')
+      expect(store.countPlannedDaysAhead(today)).toBe(1)
+    })
+
+    it('counts a day carrying both a recipe and notes once', () => {
+      const store = useMealPlanStore()
+      store.assign(today, 'recipe-1')
+      store.setMealNote(today, 'No onions')
+      store.setDayNote(today, 'Birthday')
+      expect(store.countPlannedDaysAhead(today)).toBe(1)
+    })
+
+    it('walks across a month boundary', () => {
+      const store = useMealPlanStore()
+      store.assign('2026-06-30', 'recipe-1')
+      store.assign('2026-07-01', 'recipe-2')
+      expect(store.countPlannedDaysAhead('2026-06-30')).toBe(2)
+    })
+
+    it('ignores meals in the past', () => {
+      const store = useMealPlanStore()
+      store.assign('2026-06-12', 'recipe-1')
+      store.assign('2026-06-13', 'recipe-2')
+      expect(store.countPlannedDaysAhead(today)).toBe(0)
+    })
+
+    it('is zero for an empty plan', () => {
+      const store = useMealPlanStore()
+      expect(store.countPlannedDaysAhead(today)).toBe(0)
+    })
+  })
 })
