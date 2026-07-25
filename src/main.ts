@@ -5,6 +5,8 @@ import 'vuetify/styles'
 import { aliases, mdi } from 'vuetify/iconsets/mdi-svg'
 import App from './App.vue'
 import router from './router'
+import { themes } from './theme'
+import { readStoredThemePreference } from './composables/useAppTheme'
 
 const vuetify = createVuetify({
   icons: {
@@ -13,15 +15,10 @@ const vuetify = createVuetify({
     sets: { mdi },
   },
   theme: {
-    defaultTheme: 'light',
-    themes: {
-      light: {
-        colors: {
-          primary: '#4a9c6f',
-          secondary: '#1a1a2e',
-        },
-      },
-    },
+    // Seeded from the persisted preference so there is no flash of the wrong theme.
+    // 'system' is resolved from prefers-color-scheme by Vuetify itself.
+    defaultTheme: readStoredThemePreference(),
+    themes,
   },
 })
 

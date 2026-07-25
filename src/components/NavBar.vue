@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { mdiHome, mdiBookOpenVariant, mdiCalendarMonth, mdiCart } from '@mdi/js'
 import DataTransferMenu from './DataTransferMenu.vue'
+import ThemeToggle from './ThemeToggle.vue'
 
 const route = useRoute()
 const currentPath = computed(() => route.path)
@@ -12,6 +13,7 @@ const currentPath = computed(() => route.path)
   <v-app-bar :elevation="2" color="primary">
     <v-app-bar-title>Hungry Halflings Hearty Handbook</v-app-bar-title>
     <template #append>
+      <ThemeToggle />
       <DataTransferMenu />
     </template>
   </v-app-bar>
