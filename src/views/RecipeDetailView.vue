@@ -230,7 +230,7 @@ function ingredientLabel(ingredient: Ingredient) {
       </div>
 
       <h2 class="text-subtitle-1 font-weight-bold mb-2">Ingredients</h2>
-      <v-list v-if="recipe.ingredients.length" lines="two">
+      <v-list v-if="recipe.ingredients.length" lines="two" class="ingredient-list">
         <v-list-item
           v-for="(ingredient, index) in recipe.ingredients"
           :key="index"
@@ -262,3 +262,12 @@ function ingredientLabel(ingredient: Ingredient) {
     <p v-else class="text-body-2 text-medium-emphasis font-italic">Recipe not found.</p>
   </v-container>
 </template>
+
+<style scoped>
+/* The prepend bullet defaults to centering against the whole item, including the
+   chip row that only some ingredients show. Top-align it with the title instead so it
+   sits next to the ingredient name rather than drifting toward the middle of the row. */
+.ingredient-list :deep(.v-list-item__prepend) {
+  align-self: flex-start;
+}
+</style>
