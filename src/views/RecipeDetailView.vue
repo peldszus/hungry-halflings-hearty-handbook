@@ -264,10 +264,25 @@ function ingredientLabel(ingredient: Ingredient) {
 </template>
 
 <style scoped>
-/* The prepend bullet defaults to centering against the whole item, including the
-   chip row that only some ingredients show. Top-align it with the title instead so it
-   sits next to the ingredient name rather than drifting toward the middle of the row. */
-.ingredient-list :deep(.v-list-item__prepend) {
+/* Vuetify pads the item out to a fixed "two-line" min-height and then centers both the
+   prepend icon and the content block within that full height. Rows without a chip line
+   are shorter than that reserved height, so centering left their (also centered) title
+   text out of line with a top-pinned bullet. Top-aligning both the icon and the content
+   keeps the bullet flush with the first line no matter how tall the row ends up being. */
+.ingredient-list :deep(.v-list-item__prepend),
+.ingredient-list :deep(.v-list-item__content) {
   align-self: flex-start;
+}
+
+/* Vuetify's default gap after a prepended icon (32px) is sized for a full avatar; this
+   bullet is much smaller, so tighten the gap to the text. */
+.ingredient-list {
+  --v-list-prepend-gap: 12px;
+}
+
+/* Let a long ingredient name wrap across lines instead of being clipped with an
+   ellipsis — the bullet stays pinned to the first line either way. */
+.ingredient-list :deep(.v-list-item-title) {
+  white-space: normal;
 }
 </style>
