@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   mdiChevronLeft,
@@ -13,6 +13,7 @@ import {
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
 import { highlightInfixMatches } from '@/utils/highlight'
+import { computeSwapShifts, computeMoveShifts } from '@/utils/dragShift'
 import { useSnackbar } from '@/composables/useSnackbar'
 import { formatAssignmentUsageLines } from '@/utils/relativeTime'
 
@@ -146,10 +147,51 @@ function onRowDragLeave(index: number) {
   if (dragOverRowIndex.value === index) dragOverRowIndex.value = null
 }
 
-function onRowDrop(index: number, event: DragEvent) {
+const mealBtnRefs = ref<(HTMLElement | null)[]>([])
+
+function setMealBtnRef(index: number, el: unknown) {
+  const node = el && typeof el === 'object' && '$el' in el ? (el as { $el: HTMLElement }).$el : el
+  mealBtnRefs.value[index] = (node as HTMLElement | null) ?? null
+}
+
+function rowPitch(): number {
+  const first = mealBtnRefs.value[0]
+  const second = mealBtnRefs.value[1]
+  if (!first || !second) return 0
+  return second.getBoundingClientRect().top - first.getBoundingClientRect().top
+}
+
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  )
+}
+
+// jsdom (used by the test suite) implements neither Element.animate nor window.matchMedia, so
+// this is a silent no-op under test and only animates in real browsers.
+function animateShift(shifts: Map<number, number>) {
+  if (prefersReducedMotion()) return
+  const pitch = rowPitch()
+  if (!pitch) return
+  shifts.forEach((rowsTravelled, index) => {
+    if (rowsTravelled === 0) return
+    const el = mealBtnRefs.value[index]
+    if (!el || typeof el.animate !== 'function') return
+    el.animate(
+      [{ transform: `translateY(${rowsTravelled * pitch}px)` }, { transform: 'translateY(0)' }],
+      { duration: 220, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }
+    )
+  })
+}
+
+async function onRowDrop(index: number, event: DragEvent) {
   event.preventDefault()
   if (draggingIndex.value === null || index === draggingIndex.value) return
+  const shifts = computeSwapShifts(draggingIndex.value, index)
   mealPlanStore.swapEntries(weekDays.value[draggingIndex.value].iso, weekDays.value[index].iso)
+  await nextTick()
+  animateShift(shifts)
 }
 
 function onZoneDragOver(zoneIndex: number, event: DragEvent) {
@@ -164,12 +206,15 @@ function onZoneDragLeave(zoneIndex: number) {
   if (dragOverZoneIndex.value === zoneIndex) dragOverZoneIndex.value = null
 }
 
-function onZoneDrop(zoneIndex: number, event: DragEvent) {
+async function onZoneDrop(zoneIndex: number, event: DragEvent) {
   event.preventDefault()
   if (draggingIndex.value === null) return
   const targetIndex = resolveMoveTargetIndex(draggingIndex.value, zoneIndex)
   if (targetIndex === draggingIndex.value) return
+  const shifts = computeMoveShifts(draggingIndex.value, targetIndex)
   mealPlanStore.moveEntry(weekDays.value[draggingIndex.value].iso, weekDays.value[targetIndex].iso)
+  await nextTick()
+  animateShift(shifts)
 }
 
 type NoteType = 'day' | 'meal'
@@ -249,6 +294,7 @@ function saveNote() {
               <!-- An empty day now offers to fill itself rather than rendering as a
                    disabled-looking blank button. -->
               <v-btn
+                :ref="(el) => setMealBtnRef(index, el)"
                 variant="tonal"
                 density="compact"
                 class="meal-btn"

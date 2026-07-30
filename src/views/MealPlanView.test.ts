@@ -378,7 +378,9 @@ describe('MealPlanView drag and drop reorder', () => {
     const router = makeRouter()
     router.push({ name: 'meal-plan' })
     await router.isReady()
-    return mount(MealPlanView, { global: { plugins: [router, pinia] } })
+    // Attached to the document so the geometry stub below (which queries `document`) can find
+    // the rendered meal buttons; every other test in this block only queries the wrapper itself.
+    return mount(MealPlanView, { global: { plugins: [router, pinia] }, attachTo: document.body })
   }
 
   it('hides meal buttons and insert zones while in edit mode', async () => {
@@ -594,6 +596,89 @@ describe('MealPlanView drag and drop reorder', () => {
     expect(zones[5].classes()).not.toContain('insert-zone--active')
 
     wrapper.unmount()
+  })
+
+  // jsdom implements neither Element.animate nor window.matchMedia (confirmed while designing
+  // this feature), so both are stubbed here purely to observe whether the component *tries* to
+  // animate - the row-index math itself is covered directly in dragShift.test.ts.
+  function stubAnimateAndGeometry() {
+    const animateSpy = vi.fn()
+    Object.defineProperty(HTMLElement.prototype, 'animate', {
+      configurable: true,
+      writable: true,
+      value: animateSpy,
+    })
+    const originalRect = HTMLElement.prototype.getBoundingClientRect
+    HTMLElement.prototype.getBoundingClientRect = function (this: HTMLElement) {
+      const buttons = Array.from(document.querySelectorAll('[data-testid="meal-btn"]'))
+      const index = buttons.indexOf(this)
+      return { top: index * 50 } as DOMRect
+    }
+    return {
+      animateSpy,
+      restore: () => {
+        delete (HTMLElement.prototype as { animate?: unknown }).animate
+        HTMLElement.prototype.getBoundingClientRect = originalRect
+      },
+    }
+  }
+
+  it('animates affected rows with the Web Animations API after a swap', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const recipes = useRecipesStore()
+    const mealPlan = useMealPlanStore()
+    const stew = recipes.addRecipe({ name: 'Stew', ingredients: [], servings: 2 })
+    const soup = recipes.addRecipe({ name: 'Soup', ingredients: [], servings: 2 })
+    mealPlan.assign(monday, stew.id)
+    mealPlan.assign(tuesday, soup.id)
+
+    const { animateSpy, restore } = stubAnimateAndGeometry()
+    try {
+      const wrapper = await mountView(pinia)
+      const buttons = wrapper.findAll('[data-testid="meal-btn"]')
+
+      await buttons[0].trigger('dragstart', { dataTransfer: dataTransferStub() })
+      await buttons[1].trigger('drop', { dataTransfer: dataTransferStub() })
+      await flushPromises()
+
+      expect(animateSpy).toHaveBeenCalledTimes(2)
+      wrapper.unmount()
+    } finally {
+      restore()
+    }
+  })
+
+  it('skips the animation when the user prefers reduced motion', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const recipes = useRecipesStore()
+    const mealPlan = useMealPlanStore()
+    const stew = recipes.addRecipe({ name: 'Stew', ingredients: [], servings: 2 })
+    const soup = recipes.addRecipe({ name: 'Soup', ingredients: [], servings: 2 })
+    mealPlan.assign(monday, stew.id)
+    mealPlan.assign(tuesday, soup.id)
+
+    const { animateSpy, restore } = stubAnimateAndGeometry()
+    const originalMatchMedia = window.matchMedia
+    window.matchMedia = vi
+      .fn()
+      .mockReturnValue({ matches: true }) as unknown as typeof window.matchMedia
+
+    try {
+      const wrapper = await mountView(pinia)
+      const buttons = wrapper.findAll('[data-testid="meal-btn"]')
+
+      await buttons[0].trigger('dragstart', { dataTransfer: dataTransferStub() })
+      await buttons[1].trigger('drop', { dataTransfer: dataTransferStub() })
+      await flushPromises()
+
+      expect(animateSpy).not.toHaveBeenCalled()
+      wrapper.unmount()
+    } finally {
+      restore()
+      window.matchMedia = originalMatchMedia
+    }
   })
 })
 
