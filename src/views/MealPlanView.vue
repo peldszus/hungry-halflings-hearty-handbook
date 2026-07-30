@@ -100,6 +100,78 @@ function onRecipeChange(date: string, value: string | null) {
   }
 }
 
+type WeekDay = (typeof weekDays)['value'][number]
+
+// Dragging is only offered for days with something to move; an empty or day-note-only day has
+// nothing meaningful to drag, but remains a valid drop target for both swap and move below.
+function isDragSource(day: WeekDay): boolean {
+  return Boolean(day.recipe) || Boolean(day.mealNote)
+}
+
+const draggingIndex = ref<number | null>(null)
+const dragOverRowIndex = ref<number | null>(null)
+const dragOverZoneIndex = ref<number | null>(null)
+
+// Insert zones are numbered 0..7, zone k sitting immediately before row k (zone 7 after row 6).
+// Removing the dragged day and reinserting it at the zone shifts the zone index down by one once
+// the zone is past the source, which is what turns a zone index into a destination day index.
+function resolveMoveTargetIndex(sourceIndex: number, zoneIndex: number): number {
+  return zoneIndex <= sourceIndex ? zoneIndex : zoneIndex - 1
+}
+
+function onDragStart(index: number, event: DragEvent) {
+  if (!isDragSource(weekDays.value[index])) {
+    event.preventDefault()
+    return
+  }
+  draggingIndex.value = index
+  event.dataTransfer?.setData('text/plain', weekDays.value[index].iso)
+  if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
+}
+
+function onDragEnd() {
+  draggingIndex.value = null
+  dragOverRowIndex.value = null
+  dragOverZoneIndex.value = null
+}
+
+function onRowDragOver(index: number, event: DragEvent) {
+  if (draggingIndex.value === null || index === draggingIndex.value) return
+  event.preventDefault()
+  dragOverRowIndex.value = index
+  dragOverZoneIndex.value = null
+}
+
+function onRowDragLeave(index: number) {
+  if (dragOverRowIndex.value === index) dragOverRowIndex.value = null
+}
+
+function onRowDrop(index: number, event: DragEvent) {
+  event.preventDefault()
+  if (draggingIndex.value === null || index === draggingIndex.value) return
+  mealPlanStore.swapEntries(weekDays.value[draggingIndex.value].iso, weekDays.value[index].iso)
+}
+
+function onZoneDragOver(zoneIndex: number, event: DragEvent) {
+  if (draggingIndex.value === null) return
+  if (resolveMoveTargetIndex(draggingIndex.value, zoneIndex) === draggingIndex.value) return
+  event.preventDefault()
+  dragOverZoneIndex.value = zoneIndex
+  dragOverRowIndex.value = null
+}
+
+function onZoneDragLeave(zoneIndex: number) {
+  if (dragOverZoneIndex.value === zoneIndex) dragOverZoneIndex.value = null
+}
+
+function onZoneDrop(zoneIndex: number, event: DragEvent) {
+  event.preventDefault()
+  if (draggingIndex.value === null) return
+  const targetIndex = resolveMoveTargetIndex(draggingIndex.value, zoneIndex)
+  if (targetIndex === draggingIndex.value) return
+  mealPlanStore.moveEntry(weekDays.value[draggingIndex.value].iso, weekDays.value[targetIndex].iso)
+}
+
 type NoteType = 'day' | 'meal'
 
 const noteDialog = ref(false)
@@ -153,120 +225,155 @@ function saveNote() {
 
     <div class="meal-plan-list">
       <div
-        v-for="day in weekDays"
-        :key="day.iso"
-        class="meal-plan-row"
-        :class="{ 'meal-plan-row--today': day.iso === todayIso }"
-      >
-        <div class="row-grid">
-          <div class="day-label">
-            <span class="font-weight-bold text-body-2">{{ day.weekday }}</span>
-            <span class="text-caption text-medium-emphasis ml-1">{{ day.date }}</span>
+        v-if="!editMode"
+        class="insert-zone"
+        data-testid="insert-zone"
+        :class="{ 'insert-zone--active': dragOverZoneIndex === 0 }"
+        @dragover="onZoneDragOver(0, $event)"
+        @dragleave="onZoneDragLeave(0)"
+        @drop="onZoneDrop(0, $event)"
+      />
+      <template v-for="(day, index) in weekDays" :key="day.iso">
+        <div
+          class="meal-plan-row"
+          data-testid="meal-plan-row"
+          :class="{ 'meal-plan-row--today': day.iso === todayIso }"
+        >
+          <div class="row-grid">
+            <div class="day-label">
+              <span class="font-weight-bold text-body-2">{{ day.weekday }}</span>
+              <span class="text-caption text-medium-emphasis ml-1">{{ day.date }}</span>
+            </div>
+
+            <template v-if="!editMode">
+              <!-- An empty day now offers to fill itself rather than rendering as a
+                   disabled-looking blank button. -->
+              <v-btn
+                variant="tonal"
+                density="compact"
+                class="meal-btn"
+                data-testid="meal-btn"
+                :class="{
+                  'meal-btn--empty': !day.recipe,
+                  'meal-btn--dragging': draggingIndex === index,
+                  'meal-btn--drop-target': dragOverRowIndex === index,
+                }"
+                :color="day.recipe ? undefined : 'primary'"
+                :prepend-icon="day.recipe ? undefined : mdiPlus"
+                :draggable="isDragSource(day)"
+                @click="
+                  day.recipe
+                    ? router.push({ name: 'recipe-detail', params: { id: day.recipe.id } })
+                    : (editMode = true)
+                "
+                @dragstart="onDragStart(index, $event)"
+                @dragover="onRowDragOver(index, $event)"
+                @dragleave="onRowDragLeave(index)"
+                @drop="onRowDrop(index, $event)"
+                @dragend="onDragEnd"
+              >
+                <span class="meal-btn__label">{{ day.recipe?.name ?? 'Add meal' }}</span>
+              </v-btn>
+            </template>
+
+            <v-autocomplete
+              v-else
+              :model-value="day.selectedRecipeId"
+              :items="recipeSelectItems"
+              item-title="title"
+              item-value="value"
+              :custom-filter="recipeFilter"
+              placeholder="— No meal —"
+              density="compact"
+              hide-details
+              clearable
+              @update:model-value="(v: string | null) => onRecipeChange(day.iso, v)"
+              @update:search="(v: string) => (searchText = v)"
+            >
+              <template #item="{ item, props: itemProps }">
+                <v-list-item v-bind="itemProps" :title="undefined">
+                  <template #title>
+                    <span
+                      v-for="(seg, i) in highlightInfixMatches(item.title, searchText)"
+                      :key="i"
+                      :class="{ 'search-match': seg.matched }"
+                      >{{ seg.text }}</span
+                    >
+                    <v-icon
+                      v-if="item.favourite"
+                      :icon="mdiStar"
+                      color="yellow-darken-2"
+                      size="small"
+                      class="ml-2"
+                    />
+                  </template>
+                  <template #subtitle>
+                    <div
+                      v-for="(line, i) in usageLines(item.value, day.iso)"
+                      :key="i"
+                      class="last-used text-disabled"
+                    >
+                      {{ line }}
+                    </div>
+                  </template>
+                  <div v-if="item.labels.length" class="d-flex flex-wrap ga-1 mt-1">
+                    <v-chip
+                      v-for="label in item.labels"
+                      :key="label"
+                      size="x-small"
+                      color="primary"
+                    >
+                      {{ label }}
+                    </v-chip>
+                  </div>
+                </v-list-item>
+              </template>
+            </v-autocomplete>
           </div>
 
-          <template v-if="!editMode">
-            <!-- An empty day now offers to fill itself rather than rendering as a
-                 disabled-looking blank button. -->
-            <v-btn
-              variant="tonal"
-              density="compact"
-              class="meal-btn"
-              :class="{ 'meal-btn--empty': !day.recipe }"
-              :color="day.recipe ? undefined : 'primary'"
-              :prepend-icon="day.recipe ? undefined : mdiPlus"
-              @click="
-                day.recipe
-                  ? router.push({ name: 'recipe-detail', params: { id: day.recipe.id } })
-                  : (editMode = true)
-              "
+          <div class="row-grid notes-row">
+            <button
+              type="button"
+              class="note-field"
+              data-testid="day-note-field"
+              :aria-label="`Day note for ${day.weekday} ${day.date}`"
+              @click="openNote(day.iso, 'day')"
             >
-              <span class="meal-btn__label">{{ day.recipe?.name ?? 'Add meal' }}</span>
-            </v-btn>
-          </template>
-
-          <v-autocomplete
-            v-else
-            :model-value="day.selectedRecipeId"
-            :items="recipeSelectItems"
-            item-title="title"
-            item-value="value"
-            :custom-filter="recipeFilter"
-            placeholder="— No meal —"
-            density="compact"
-            hide-details
-            clearable
-            @update:model-value="(v: string | null) => onRecipeChange(day.iso, v)"
-            @update:search="(v: string) => (searchText = v)"
-          >
-            <template #item="{ item, props: itemProps }">
-              <v-list-item v-bind="itemProps" :title="undefined">
-                <template #title>
-                  <span
-                    v-for="(seg, i) in highlightInfixMatches(item.title, searchText)"
-                    :key="i"
-                    :class="{ 'search-match': seg.matched }"
-                    >{{ seg.text }}</span
-                  >
-                  <v-icon
-                    v-if="item.favourite"
-                    :icon="mdiStar"
-                    color="yellow-darken-2"
-                    size="small"
-                    class="ml-2"
-                  />
-                </template>
-                <template #subtitle>
-                  <div
-                    v-for="(line, i) in usageLines(item.value, day.iso)"
-                    :key="i"
-                    class="last-used text-disabled"
-                  >
-                    {{ line }}
-                  </div>
-                </template>
-                <div v-if="item.labels.length" class="d-flex flex-wrap ga-1 mt-1">
-                  <v-chip v-for="label in item.labels" :key="label" size="x-small" color="primary">
-                    {{ label }}
-                  </v-chip>
-                </div>
-              </v-list-item>
-            </template>
-          </v-autocomplete>
+              <v-icon
+                :icon="mdiNoteTextOutline"
+                size="x-small"
+                class="note-icon"
+                :class="{ 'note-icon-empty': !day.dayNote }"
+              />
+              <span class="note-text">{{ day.dayNote }}</span>
+            </button>
+            <button
+              type="button"
+              class="note-field"
+              data-testid="meal-note-field"
+              :aria-label="`Meal note for ${day.weekday} ${day.date}`"
+              @click="openNote(day.iso, 'meal')"
+            >
+              <v-icon
+                :icon="mdiNoteTextOutline"
+                size="x-small"
+                class="note-icon"
+                :class="{ 'note-icon-empty': !day.mealNote }"
+              />
+              <span class="note-text">{{ day.mealNote }}</span>
+            </button>
+          </div>
         </div>
-
-        <div class="row-grid notes-row">
-          <button
-            type="button"
-            class="note-field"
-            data-testid="day-note-field"
-            :aria-label="`Day note for ${day.weekday} ${day.date}`"
-            @click="openNote(day.iso, 'day')"
-          >
-            <v-icon
-              :icon="mdiNoteTextOutline"
-              size="x-small"
-              class="note-icon"
-              :class="{ 'note-icon-empty': !day.dayNote }"
-            />
-            <span class="note-text">{{ day.dayNote }}</span>
-          </button>
-          <button
-            type="button"
-            class="note-field"
-            data-testid="meal-note-field"
-            :aria-label="`Meal note for ${day.weekday} ${day.date}`"
-            @click="openNote(day.iso, 'meal')"
-          >
-            <v-icon
-              :icon="mdiNoteTextOutline"
-              size="x-small"
-              class="note-icon"
-              :class="{ 'note-icon-empty': !day.mealNote }"
-            />
-            <span class="note-text">{{ day.mealNote }}</span>
-          </button>
-        </div>
-      </div>
+        <div
+          v-if="!editMode"
+          class="insert-zone"
+          data-testid="insert-zone"
+          :class="{ 'insert-zone--active': dragOverZoneIndex === index + 1 }"
+          @dragover="onZoneDragOver(index + 1, $event)"
+          @dragleave="onZoneDragLeave(index + 1)"
+          @drop="onZoneDrop(index + 1, $event)"
+        />
+      </template>
     </div>
 
     <v-dialog v-model="noteDialog">
@@ -359,6 +466,30 @@ function saveNote() {
 }
 .meal-btn--empty {
   opacity: 0.75;
+}
+.meal-btn[draggable='true'] {
+  cursor: grab;
+}
+.meal-btn--dragging {
+  opacity: 0.5;
+}
+.meal-btn--drop-target {
+  outline: 2px dashed rgb(var(--v-theme-primary));
+  outline-offset: 2px;
+}
+/* A near-invisible strip between rows that grows into a solid insertion line while a drag hovers
+   over it, so users can tell "drop between" apart from "drop on" without extra UI chrome. */
+.insert-zone {
+  height: 4px;
+  margin-block: 1px;
+  border-radius: 2px;
+  transition:
+    height 0.1s ease,
+    background-color 0.1s ease;
+}
+.insert-zone--active {
+  height: 10px;
+  background: rgb(var(--v-theme-primary));
 }
 .notes-row {
   margin-top: 2px;

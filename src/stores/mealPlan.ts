@@ -133,6 +133,74 @@ export const useMealPlanStore = defineStore('mealPlan', () => {
     save(entries.value)
   }
 
+  interface MealContent {
+    recipeId?: string
+    mealNote?: string
+  }
+
+  function readContent(date: string): MealContent {
+    const entry = entries.value.find((e) => e.date === date)
+    return { recipeId: entry?.recipeId, mealNote: entry?.mealNote }
+  }
+
+  function applyContent(date: string, content: MealContent) {
+    const entry = upsertEntry(date)
+    if (content.recipeId) entry.recipeId = content.recipeId
+    else delete entry.recipeId
+    if (content.mealNote) entry.mealNote = content.mealNote
+    else delete entry.mealNote
+    pruneIfEmpty(date)
+  }
+
+  /**
+   * Swaps recipe + meal note between two dates. Each date's dayNote describes the calendar day
+   * itself, not the meal, so it stays put regardless of which meal content passes through.
+   */
+  function swapEntries(dateA: string, dateB: string) {
+    if (dateA === dateB) return
+    const contentA = readContent(dateA)
+    const contentB = readContent(dateB)
+    applyContent(dateA, contentB)
+    applyContent(dateB, contentA)
+    save(entries.value)
+  }
+
+  function datesBetweenInclusive(dateA: string, dateB: string): string[] {
+    const [start, end] = dateA <= dateB ? [dateA, dateB] : [dateB, dateA]
+    const dates: string[] = []
+    let d = start
+    while (d <= end) {
+      dates.push(d)
+      d = nextIsoDate(d)
+    }
+    return dates
+  }
+
+  /**
+   * Moves recipe + meal note from one date to another, shifting the content of every date in
+   * between by one day to make room. dayNote is never part of the shifted payload, so it stays
+   * pinned to its date throughout.
+   */
+  function moveEntry(fromDate: string, toDate: string) {
+    if (fromDate === toDate) return
+    const dates = datesBetweenInclusive(fromDate, toDate)
+    const snapshot = new Map(dates.map((d) => [d, readContent(d)]))
+    const movedContent = snapshot.get(fromDate)!
+
+    if (fromDate < toDate) {
+      for (let i = 0; i < dates.length - 1; i++) {
+        applyContent(dates[i], snapshot.get(dates[i + 1])!)
+      }
+      applyContent(dates[dates.length - 1], movedContent)
+    } else {
+      for (let i = dates.length - 1; i > 0; i--) {
+        applyContent(dates[i], snapshot.get(dates[i - 1])!)
+      }
+      applyContent(dates[0], movedContent)
+    }
+    save(entries.value)
+  }
+
   return {
     entries,
     assign,
@@ -140,6 +208,9 @@ export const useMealPlanStore = defineStore('mealPlan', () => {
     setDayNote,
     setMealNote,
     replaceAll,
+    swapEntries,
+    moveEntry,
+    isPlanned,
     getForDate,
     getForRange,
     getLastUsedDate,
