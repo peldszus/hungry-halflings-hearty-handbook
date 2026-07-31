@@ -204,14 +204,23 @@ describe('MealPlanView week navigation', () => {
   })
 })
 
+// Swipe handling listens on `window` so a gesture anywhere on screen navigates weeks, not just
+// over the calendar rows — so these dispatch there by default. Passing a specific element (e.g.
+// a node inside a teleported overlay) lets a test target where the "touch" started.
 async function swipe(
-  wrapper: ReturnType<typeof mount>,
   start: { x: number; y: number },
-  end: { x: number; y: number }
+  end: { x: number; y: number },
+  target: EventTarget = window
 ) {
-  const list = wrapper.find('.meal-plan-list')
-  await list.trigger('touchstart', { touches: [{ clientX: start.x, clientY: start.y }] })
-  await list.trigger('touchend', { changedTouches: [{ clientX: end.x, clientY: end.y }] })
+  const startEvent = new Event('touchstart', { bubbles: true })
+  Object.assign(startEvent, { touches: [{ clientX: start.x, clientY: start.y }] })
+  target.dispatchEvent(startEvent)
+
+  const endEvent = new Event('touchend', { bubbles: true })
+  Object.assign(endEvent, { changedTouches: [{ clientX: end.x, clientY: end.y }] })
+  target.dispatchEvent(endEvent)
+
+  await flushPromises()
 }
 
 describe('MealPlanView swipe navigation', () => {
@@ -234,7 +243,7 @@ describe('MealPlanView swipe navigation', () => {
     await router.isReady()
 
     const wrapper = mount(MealPlanView, { global: { plugins: [router, pinia] } })
-    await swipe(wrapper, { x: 300, y: 200 }, { x: 200, y: 205 })
+    await swipe({ x: 300, y: 200 }, { x: 200, y: 205 })
 
     expect(wrapper.text()).toContain('Jun 22, 2026')
     expect(wrapper.text()).toContain('Jun 28, 2026')
@@ -250,10 +259,28 @@ describe('MealPlanView swipe navigation', () => {
     await router.isReady()
 
     const wrapper = mount(MealPlanView, { global: { plugins: [router, pinia] } })
-    await swipe(wrapper, { x: 200, y: 200 }, { x: 300, y: 205 })
+    await swipe({ x: 200, y: 200 }, { x: 300, y: 205 })
 
     expect(wrapper.text()).toContain('Jun 8, 2026')
     expect(wrapper.text()).toContain('Jun 14, 2026')
+
+    wrapper.unmount()
+  })
+
+  it('navigates when the swipe starts below the week list, on the empty background', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const router = makeRouter()
+    router.push({ name: 'meal-plan' })
+    await router.isReady()
+
+    const wrapper = mount(MealPlanView, { global: { plugins: [router, pinia] } })
+    // No element lives at these coordinates; dispatching straight on `window` is exactly what a
+    // touch on empty background below the calendar rows looks like.
+    await swipe({ x: 300, y: 900 }, { x: 200, y: 905 })
+
+    expect(wrapper.text()).toContain('Jun 22, 2026')
+    expect(wrapper.text()).toContain('Jun 28, 2026')
 
     wrapper.unmount()
   })
@@ -267,10 +294,10 @@ describe('MealPlanView swipe navigation', () => {
 
     const wrapper = mount(MealPlanView, { global: { plugins: [router, pinia] } })
 
-    await swipe(wrapper, { x: 200, y: 200 }, { x: 220, y: 200 })
+    await swipe({ x: 200, y: 200 }, { x: 220, y: 200 })
     expect(wrapper.text()).toContain('Jun 15, 2026')
 
-    await swipe(wrapper, { x: 200, y: 100 }, { x: 205, y: 400 })
+    await swipe({ x: 200, y: 100 }, { x: 205, y: 400 })
     expect(wrapper.text()).toContain('Jun 15, 2026')
 
     wrapper.unmount()
@@ -288,12 +315,37 @@ describe('MealPlanView swipe navigation', () => {
     await wrapper.vm.$nextTick()
     expect(wrapper.find(iconSelector(mdiCheck)).exists()).toBe(true)
 
-    await swipe(wrapper, { x: 300, y: 200 }, { x: 200, y: 205 })
+    await swipe({ x: 300, y: 200 }, { x: 200, y: 205 })
 
     expect(wrapper.find(iconSelector(mdiPencil)).exists()).toBe(true)
     expect(wrapper.find(iconSelector(mdiCheck)).exists()).toBe(false)
 
     wrapper.unmount()
+  })
+
+  it('ignores a swipe that starts inside an open note dialog', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const router = makeRouter()
+    router.push({ name: 'meal-plan' })
+    await router.isReady()
+
+    const wrapper = mount(MealPlanView, {
+      global: { plugins: [router, pinia] },
+      attachTo: document.body,
+    })
+
+    const firstRow = wrapper.findAll('.meal-plan-row')[0]
+    await firstRow.find('[data-testid="day-note-field"]').trigger('click')
+    await flushPromises()
+
+    const overlay = document.querySelector('.v-overlay-container')
+    expect(overlay).not.toBeNull()
+
+    await swipe({ x: 300, y: 200 }, { x: 200, y: 205 }, overlay!)
+
+    expect(wrapper.text()).toContain('Jun 15, 2026')
+    expect(wrapper.text()).toContain('Jun 21, 2026')
   })
 })
 

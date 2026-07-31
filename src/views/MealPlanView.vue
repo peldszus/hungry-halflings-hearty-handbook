@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   mdiChevronLeft,
@@ -28,23 +28,53 @@ const weekOffset = ref(0)
 const editMode = ref(false)
 const searchText = ref('')
 
-watch(weekOffset, () => {
+const mealListEl = ref<HTMLElement | null>(null)
+
+watch(weekOffset, async (newOffset, oldOffset) => {
   editMode.value = false
+  await nextTick()
+  animateWeekTransition(newOffset > oldOffset ? 1 : -1)
 })
+
+// Slides the new week in from the direction of travel so a swipe or chevron click reads as
+// "moved to the next/previous week" rather than an unexplained content swap.
+function animateWeekTransition(direction: 1 | -1) {
+  if (prefersReducedMotion()) return
+  const el = mealListEl.value
+  if (!el || typeof el.animate !== 'function') return
+  el.animate(
+    [
+      { transform: `translateX(${direction * 20}px)`, opacity: 0.4 },
+      { transform: 'translateX(0)', opacity: 1 },
+    ],
+    { duration: 200, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }
+  )
+}
 
 const SWIPE_THRESHOLD_PX = 50
 
 let touchStartX = 0
 let touchStartY = 0
+let trackingSwipe = false
+
+// Overlays (the note dialog, the recipe autocomplete's dropdown) are teleported outside this
+// view's own DOM, so a swipe starting inside one — e.g. dragging to select text in the note
+// textarea — must not change the week hidden behind it.
+function isWithinOverlay(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest('.v-overlay-container') !== null
+}
 
 function onTouchStart(event: TouchEvent) {
   const touch = event.touches[0]
-  if (!touch) return
+  trackingSwipe = !!touch && !isWithinOverlay(event.target)
+  if (!trackingSwipe || !touch) return
   touchStartX = touch.clientX
   touchStartY = touch.clientY
 }
 
 function onTouchEnd(event: TouchEvent) {
+  if (!trackingSwipe) return
+  trackingSwipe = false
   const touch = event.changedTouches[0]
   if (!touch) return
   const deltaX = touch.clientX - touchStartX
@@ -53,6 +83,19 @@ function onTouchEnd(event: TouchEvent) {
   if (Math.abs(deltaX) < SWIPE_THRESHOLD_PX) return
   weekOffset.value += deltaX < 0 ? 1 : -1
 }
+
+// Listening on window (rather than just the week list) lets a swipe anywhere on the screen —
+// including the empty area below a short week — navigate weeks, which matters most on mobile
+// where that's the area closest to the thumb.
+onMounted(() => {
+  window.addEventListener('touchstart', onTouchStart, { passive: true })
+  window.addEventListener('touchend', onTouchEnd, { passive: true })
+})
+
+onUnmounted(() => {
+  window.removeEventListener('touchstart', onTouchStart)
+  window.removeEventListener('touchend', onTouchEnd)
+})
 
 const todayIso = new Date().toISOString().slice(0, 10)
 
@@ -290,7 +333,7 @@ function saveNote() {
       />
     </div>
 
-    <div class="meal-plan-list" @touchstart="onTouchStart" @touchend="onTouchEnd">
+    <div ref="mealListEl" class="meal-plan-list">
       <div
         v-if="!editMode"
         class="insert-zone"
