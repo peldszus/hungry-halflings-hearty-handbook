@@ -32,6 +32,28 @@ watch(weekOffset, () => {
   editMode.value = false
 })
 
+const SWIPE_THRESHOLD_PX = 50
+
+let touchStartX = 0
+let touchStartY = 0
+
+function onTouchStart(event: TouchEvent) {
+  const touch = event.touches[0]
+  if (!touch) return
+  touchStartX = touch.clientX
+  touchStartY = touch.clientY
+}
+
+function onTouchEnd(event: TouchEvent) {
+  const touch = event.changedTouches[0]
+  if (!touch) return
+  const deltaX = touch.clientX - touchStartX
+  const deltaY = touch.clientY - touchStartY
+  if (Math.abs(deltaX) <= Math.abs(deltaY)) return
+  if (Math.abs(deltaX) < SWIPE_THRESHOLD_PX) return
+  weekOffset.value += deltaX < 0 ? 1 : -1
+}
+
 const todayIso = new Date().toISOString().slice(0, 10)
 
 const weekDays = computed(() => {
@@ -268,7 +290,7 @@ function saveNote() {
       />
     </div>
 
-    <div class="meal-plan-list">
+    <div class="meal-plan-list" @touchstart="onTouchStart" @touchend="onTouchEnd">
       <div
         v-if="!editMode"
         class="insert-zone"

@@ -204,6 +204,99 @@ describe('MealPlanView week navigation', () => {
   })
 })
 
+async function swipe(
+  wrapper: ReturnType<typeof mount>,
+  start: { x: number; y: number },
+  end: { x: number; y: number }
+) {
+  const list = wrapper.find('.meal-plan-list')
+  await list.trigger('touchstart', { touches: [{ clientX: start.x, clientY: start.y }] })
+  await list.trigger('touchend', { changedTouches: [{ clientX: end.x, clientY: end.y }] })
+}
+
+describe('MealPlanView swipe navigation', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    setActivePinia(createPinia())
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-17T12:00:00'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('navigates to the next week on a left swipe past the threshold', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const router = makeRouter()
+    router.push({ name: 'meal-plan' })
+    await router.isReady()
+
+    const wrapper = mount(MealPlanView, { global: { plugins: [router, pinia] } })
+    await swipe(wrapper, { x: 300, y: 200 }, { x: 200, y: 205 })
+
+    expect(wrapper.text()).toContain('Jun 22, 2026')
+    expect(wrapper.text()).toContain('Jun 28, 2026')
+
+    wrapper.unmount()
+  })
+
+  it('navigates to the previous week on a right swipe past the threshold', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const router = makeRouter()
+    router.push({ name: 'meal-plan' })
+    await router.isReady()
+
+    const wrapper = mount(MealPlanView, { global: { plugins: [router, pinia] } })
+    await swipe(wrapper, { x: 200, y: 200 }, { x: 300, y: 205 })
+
+    expect(wrapper.text()).toContain('Jun 8, 2026')
+    expect(wrapper.text()).toContain('Jun 14, 2026')
+
+    wrapper.unmount()
+  })
+
+  it('does not navigate on a short or vertical movement', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const router = makeRouter()
+    router.push({ name: 'meal-plan' })
+    await router.isReady()
+
+    const wrapper = mount(MealPlanView, { global: { plugins: [router, pinia] } })
+
+    await swipe(wrapper, { x: 200, y: 200 }, { x: 220, y: 200 })
+    expect(wrapper.text()).toContain('Jun 15, 2026')
+
+    await swipe(wrapper, { x: 200, y: 100 }, { x: 205, y: 400 })
+    expect(wrapper.text()).toContain('Jun 15, 2026')
+
+    wrapper.unmount()
+  })
+
+  it('exits edit mode when navigating to a different week via swipe', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const router = makeRouter()
+    router.push({ name: 'meal-plan' })
+    await router.isReady()
+
+    const wrapper = mount(MealPlanView, { global: { plugins: [router, pinia] } })
+    clickIconButton(wrapper, mdiPencil)
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find(iconSelector(mdiCheck)).exists()).toBe(true)
+
+    await swipe(wrapper, { x: 300, y: 200 }, { x: 200, y: 205 })
+
+    expect(wrapper.find(iconSelector(mdiPencil)).exists()).toBe(true)
+    expect(wrapper.find(iconSelector(mdiCheck)).exists()).toBe(false)
+
+    wrapper.unmount()
+  })
+})
+
 describe('MealPlanView recipe assignment', () => {
   beforeEach(() => {
     localStorage.clear()
