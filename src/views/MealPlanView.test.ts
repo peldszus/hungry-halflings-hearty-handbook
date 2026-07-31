@@ -346,6 +346,342 @@ describe('MealPlanView day and meal notes', () => {
   })
 })
 
+describe('MealPlanView drag and drop reorder', () => {
+  // The displayed week for 2026-06-17 (a Wednesday) runs Mon 06-15 .. Sun 06-21.
+  const monday = '2026-06-15'
+  const tuesday = '2026-06-16'
+  const wednesday = '2026-06-17'
+  const thursday = '2026-06-18'
+  const friday = '2026-06-19'
+  const saturday = '2026-06-20'
+  const sunday = '2026-06-21'
+  const weekDates = [monday, tuesday, wednesday, thursday, friday, saturday, sunday]
+
+  beforeEach(() => {
+    localStorage.clear()
+    setActivePinia(createPinia())
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-17T12:00:00'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  // jsdom has no DragEvent constructor, so Vue Test Utils falls back to a plain Event and simply
+  // assigns any extra options (like dataTransfer) onto it directly - a stub object is enough.
+  function dataTransferStub() {
+    return { setData: vi.fn(), effectAllowed: '', dropEffect: '' }
+  }
+
+  async function mountView(pinia: ReturnType<typeof createPinia>) {
+    const router = makeRouter()
+    router.push({ name: 'meal-plan' })
+    await router.isReady()
+    // Attached to the document so the geometry stub below (which queries `document`) can find
+    // the rendered meal buttons; every other test in this block only queries the wrapper itself.
+    return mount(MealPlanView, { global: { plugins: [router, pinia] }, attachTo: document.body })
+  }
+
+  it('hides meal buttons and insert zones while in edit mode', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const wrapper = await mountView(pinia)
+
+    clickIconButton(wrapper, mdiPencil)
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('[data-testid="meal-btn"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="insert-zone"]').exists()).toBe(false)
+
+    wrapper.unmount()
+  })
+
+  it('ignores a dragstart fired on an unplanned day even if forced', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const recipes = useRecipesStore()
+    const mealPlan = useMealPlanStore()
+    const stew = recipes.addRecipe({ name: 'Stew', ingredients: [], servings: 2 })
+    const soup = recipes.addRecipe({ name: 'Soup', ingredients: [], servings: 2 })
+    mealPlan.assign(monday, stew.id)
+    mealPlan.assign(tuesday, soup.id)
+
+    const wrapper = await mountView(pinia)
+    const buttons = wrapper.findAll('[data-testid="meal-btn"]')
+
+    // Wednesday has no recipe or meal note, so forcing a dragstart on it (bypassing the
+    // draggable="false" the browser would normally enforce) must not arm a drag.
+    await buttons[2].trigger('dragstart', { dataTransfer: dataTransferStub() })
+    expect(buttons[2].classes()).not.toContain('meal-btn--dragging')
+
+    await buttons[1].trigger('drop', { dataTransfer: dataTransferStub() })
+    expect(mealPlan.getForDate(monday)?.recipeId).toBe(stew.id)
+    expect(mealPlan.getForDate(tuesday)?.recipeId).toBe(soup.id)
+
+    wrapper.unmount()
+  })
+
+  it('marks an unplanned day as not draggable but keeps it a valid drop target', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const recipes = useRecipesStore()
+    const mealPlan = useMealPlanStore()
+    const recipe = recipes.addRecipe({ name: 'Stew', ingredients: [], servings: 2 })
+    mealPlan.assign(monday, recipe.id)
+
+    const wrapper = await mountView(pinia)
+    const buttons = wrapper.findAll('[data-testid="meal-btn"]')
+
+    expect(buttons[0].attributes('draggable')).toBe('true')
+    expect(buttons[1].attributes('draggable')).toBe('false')
+
+    await buttons[0].trigger('dragstart', { dataTransfer: dataTransferStub() })
+    await buttons[1].trigger('drop', { dataTransfer: dataTransferStub() })
+
+    expect(mealPlan.getForDate(monday)).toBeUndefined()
+    expect(mealPlan.getForDate(tuesday)?.recipeId).toBe(recipe.id)
+
+    wrapper.unmount()
+  })
+
+  it("swaps two days' content when dropped directly on another day's button", async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const recipes = useRecipesStore()
+    const mealPlan = useMealPlanStore()
+    const stew = recipes.addRecipe({ name: 'Stew', ingredients: [], servings: 2 })
+    const soup = recipes.addRecipe({ name: 'Soup', ingredients: [], servings: 2 })
+    mealPlan.assign(monday, stew.id)
+    mealPlan.assign(tuesday, soup.id)
+    mealPlan.setDayNote(monday, "Mother's birthday")
+
+    const wrapper = await mountView(pinia)
+    const buttons = wrapper.findAll('[data-testid="meal-btn"]')
+
+    await buttons[0].trigger('dragstart', { dataTransfer: dataTransferStub() })
+    await buttons[1].trigger('drop', { dataTransfer: dataTransferStub() })
+
+    expect(mealPlan.getForDate(monday)?.recipeId).toBe(soup.id)
+    expect(mealPlan.getForDate(monday)?.dayNote).toBe("Mother's birthday")
+    expect(mealPlan.getForDate(tuesday)?.recipeId).toBe(stew.id)
+
+    wrapper.unmount()
+  })
+
+  it('cascades forward when dropped on an insert zone after the source', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const recipes = useRecipesStore()
+    const mealPlan = useMealPlanStore()
+    const meals = weekDates.map((date, i) => {
+      const recipe = recipes.addRecipe({ name: `Meal ${i}`, ingredients: [], servings: 2 })
+      mealPlan.assign(date, recipe.id)
+      return recipe
+    })
+
+    const wrapper = await mountView(pinia)
+    const buttons = wrapper.findAll('[data-testid="meal-btn"]')
+    const zones = wrapper.findAll('[data-testid="insert-zone"]')
+
+    // Source is Tuesday (index 1). Zone 5 sits between Friday and Saturday; since 5 > 1, it
+    // resolves to target index 4 (Friday).
+    await buttons[1].trigger('dragstart', { dataTransfer: dataTransferStub() })
+    await zones[5].trigger('drop', { dataTransfer: dataTransferStub() })
+
+    expect(weekDates.map((d) => mealPlan.getForDate(d)?.recipeId)).toEqual([
+      meals[0].id, // Mon unchanged
+      meals[2].id, // Tue <- was Wed's
+      meals[3].id, // Wed <- was Thu's
+      meals[4].id, // Thu <- was Fri's
+      meals[1].id, // Fri <- the moved item
+      meals[5].id, // Sat unchanged
+      meals[6].id, // Sun unchanged
+    ])
+
+    wrapper.unmount()
+  })
+
+  it('cascades backward when dropped on an insert zone before the source', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const recipes = useRecipesStore()
+    const mealPlan = useMealPlanStore()
+    const meals = weekDates.map((date, i) => {
+      const recipe = recipes.addRecipe({ name: `Meal ${i}`, ingredients: [], servings: 2 })
+      mealPlan.assign(date, recipe.id)
+      return recipe
+    })
+
+    const wrapper = await mountView(pinia)
+    const buttons = wrapper.findAll('[data-testid="meal-btn"]')
+    const zones = wrapper.findAll('[data-testid="insert-zone"]')
+
+    // Source is Friday (index 4). Zone 1 sits between Monday and Tuesday; since 1 <= 4, it
+    // resolves to target index 1 (Tuesday).
+    await buttons[4].trigger('dragstart', { dataTransfer: dataTransferStub() })
+    await zones[1].trigger('drop', { dataTransfer: dataTransferStub() })
+
+    expect(weekDates.map((d) => mealPlan.getForDate(d)?.recipeId)).toEqual([
+      meals[0].id, // Mon unchanged
+      meals[4].id, // Tue <- the moved item
+      meals[1].id, // Wed <- was Tue's
+      meals[2].id, // Thu <- was Wed's
+      meals[3].id, // Fri <- was Thu's
+      meals[5].id, // Sat unchanged
+      meals[6].id, // Sun unchanged
+    ])
+
+    wrapper.unmount()
+  })
+
+  it('is a no-op when dropped on either insert zone flanking the source', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const recipes = useRecipesStore()
+    const mealPlan = useMealPlanStore()
+    const meals = weekDates.map((date, i) => {
+      const recipe = recipes.addRecipe({ name: `Meal ${i}`, ingredients: [], servings: 2 })
+      mealPlan.assign(date, recipe.id)
+      return recipe
+    })
+
+    const wrapper = await mountView(pinia)
+    const buttons = wrapper.findAll('[data-testid="meal-btn"]')
+    const zones = wrapper.findAll('[data-testid="insert-zone"]')
+
+    // Source is Tuesday (index 1); zones 1 and 2 both flank it and resolve back to index 1.
+    await buttons[1].trigger('dragstart', { dataTransfer: dataTransferStub() })
+    await zones[1].trigger('drop', { dataTransfer: dataTransferStub() })
+    await zones[2].trigger('drop', { dataTransfer: dataTransferStub() })
+
+    expect(weekDates.map((d) => mealPlan.getForDate(d)?.recipeId)).toEqual(meals.map((m) => m.id))
+
+    wrapper.unmount()
+  })
+
+  it('shows drag and drop-target feedback classes and clears them on dragend', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const recipes = useRecipesStore()
+    const mealPlan = useMealPlanStore()
+    const recipe = recipes.addRecipe({ name: 'Stew', ingredients: [], servings: 2 })
+    mealPlan.assign(monday, recipe.id)
+
+    const wrapper = await mountView(pinia)
+    const buttons = wrapper.findAll('[data-testid="meal-btn"]')
+    const zones = wrapper.findAll('[data-testid="insert-zone"]')
+
+    await buttons[0].trigger('dragstart', { dataTransfer: dataTransferStub() })
+    expect(buttons[0].classes()).toContain('meal-btn--dragging')
+
+    await buttons[1].trigger('dragover', { dataTransfer: dataTransferStub() })
+    expect(buttons[1].classes()).toContain('meal-btn--drop-target')
+
+    await zones[5].trigger('dragover', { dataTransfer: dataTransferStub() })
+    expect(zones[5].classes()).toContain('insert-zone--active')
+    // Hovering a zone clears any stale row highlight from a previous hover target.
+    expect(buttons[1].classes()).not.toContain('meal-btn--drop-target')
+
+    await zones[5].trigger('dragleave')
+    expect(zones[5].classes()).not.toContain('insert-zone--active')
+
+    await buttons[1].trigger('dragover', { dataTransfer: dataTransferStub() })
+    expect(buttons[1].classes()).toContain('meal-btn--drop-target')
+    await buttons[1].trigger('dragleave')
+    expect(buttons[1].classes()).not.toContain('meal-btn--drop-target')
+
+    await buttons[0].trigger('dragend', { dataTransfer: dataTransferStub() })
+    expect(buttons[0].classes()).not.toContain('meal-btn--dragging')
+    expect(zones[5].classes()).not.toContain('insert-zone--active')
+
+    wrapper.unmount()
+  })
+
+  // jsdom implements neither Element.animate nor window.matchMedia (confirmed while designing
+  // this feature), so both are stubbed here purely to observe whether the component *tries* to
+  // animate - the row-index math itself is covered directly in dragShift.test.ts.
+  function stubAnimateAndGeometry() {
+    const animateSpy = vi.fn()
+    Object.defineProperty(HTMLElement.prototype, 'animate', {
+      configurable: true,
+      writable: true,
+      value: animateSpy,
+    })
+    const originalRect = HTMLElement.prototype.getBoundingClientRect
+    HTMLElement.prototype.getBoundingClientRect = function (this: HTMLElement) {
+      const buttons = Array.from(document.querySelectorAll('[data-testid="meal-btn"]'))
+      const index = buttons.indexOf(this)
+      return { top: index * 50 } as DOMRect
+    }
+    return {
+      animateSpy,
+      restore: () => {
+        delete (HTMLElement.prototype as { animate?: unknown }).animate
+        HTMLElement.prototype.getBoundingClientRect = originalRect
+      },
+    }
+  }
+
+  it('animates affected rows with the Web Animations API after a swap', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const recipes = useRecipesStore()
+    const mealPlan = useMealPlanStore()
+    const stew = recipes.addRecipe({ name: 'Stew', ingredients: [], servings: 2 })
+    const soup = recipes.addRecipe({ name: 'Soup', ingredients: [], servings: 2 })
+    mealPlan.assign(monday, stew.id)
+    mealPlan.assign(tuesday, soup.id)
+
+    const { animateSpy, restore } = stubAnimateAndGeometry()
+    try {
+      const wrapper = await mountView(pinia)
+      const buttons = wrapper.findAll('[data-testid="meal-btn"]')
+
+      await buttons[0].trigger('dragstart', { dataTransfer: dataTransferStub() })
+      await buttons[1].trigger('drop', { dataTransfer: dataTransferStub() })
+      await flushPromises()
+
+      expect(animateSpy).toHaveBeenCalledTimes(2)
+      wrapper.unmount()
+    } finally {
+      restore()
+    }
+  })
+
+  it('skips the animation when the user prefers reduced motion', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const recipes = useRecipesStore()
+    const mealPlan = useMealPlanStore()
+    const stew = recipes.addRecipe({ name: 'Stew', ingredients: [], servings: 2 })
+    const soup = recipes.addRecipe({ name: 'Soup', ingredients: [], servings: 2 })
+    mealPlan.assign(monday, stew.id)
+    mealPlan.assign(tuesday, soup.id)
+
+    const { animateSpy, restore } = stubAnimateAndGeometry()
+    const originalMatchMedia = window.matchMedia
+    window.matchMedia = vi
+      .fn()
+      .mockReturnValue({ matches: true }) as unknown as typeof window.matchMedia
+
+    try {
+      const wrapper = await mountView(pinia)
+      const buttons = wrapper.findAll('[data-testid="meal-btn"]')
+
+      await buttons[0].trigger('dragstart', { dataTransfer: dataTransferStub() })
+      await buttons[1].trigger('drop', { dataTransfer: dataTransferStub() })
+      await flushPromises()
+
+      expect(animateSpy).not.toHaveBeenCalled()
+      wrapper.unmount()
+    } finally {
+      restore()
+      window.matchMedia = originalMatchMedia
+    }
+  })
+})
+
 describe('MealPlanView recipe filtering', () => {
   beforeEach(() => {
     localStorage.clear()
