@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   mdiChevronLeft,
   mdiChevronRight,
-  mdiCheck,
+  mdiDotsVertical,
   mdiPencil,
   mdiStar,
   mdiNoteTextOutline,
@@ -14,24 +14,21 @@ import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
 import { highlightInfixMatches } from '@/utils/highlight'
 import { computeSwapShifts, computeMoveShifts } from '@/utils/dragShift'
-import { useSnackbar } from '@/composables/useSnackbar'
 import { formatAssignmentUsageLines } from '@/utils/relativeTime'
 
 const router = useRouter()
 const recipesStore = useRecipesStore()
 const mealPlanStore = useMealPlanStore()
 
-// Material lifts the FAB out of the way while a snackbar is showing.
-const { visible: snackbarVisible } = useSnackbar()
-
 const weekOffset = ref(0)
-const editMode = ref(false)
 const searchText = ref('')
+const editDialog = ref(false)
+const editDialogDate = ref('')
 
 const mealListEl = ref<HTMLElement | null>(null)
 
 watch(weekOffset, async (newOffset, oldOffset) => {
-  editMode.value = false
+  editDialog.value = false
   await nextTick()
   animateWeekTransition(newOffset > oldOffset ? 1 : -1)
 })
@@ -164,6 +161,18 @@ function onRecipeChange(date: string, value: string | null) {
   } else {
     mealPlanStore.unassign(date)
   }
+}
+
+const editDialogDay = computed(() => weekDays.value.find((d) => d.iso === editDialogDate.value))
+
+function openEditDialog(date: string) {
+  editDialogDate.value = date
+  editDialog.value = true
+}
+
+function onEditDialogRecipeChange(value: string | null) {
+  onRecipeChange(editDialogDate.value, value)
+  editDialog.value = false
 }
 
 type WeekDay = (typeof weekDays)['value'][number]
@@ -307,6 +316,8 @@ function saveNote() {
   }
   noteDialog.value = false
 }
+
+defineExpose({ editDialog, editDialogDate })
 </script>
 
 <template>
@@ -335,7 +346,6 @@ function saveNote() {
 
     <div ref="mealListEl" class="meal-plan-list">
       <div
-        v-if="!editMode"
         class="insert-zone"
         data-testid="insert-zone"
         :class="{ 'insert-zone--active': dragOverZoneIndex === 0 }"
@@ -355,91 +365,65 @@ function saveNote() {
               <span class="text-caption text-medium-emphasis ml-1">{{ day.date }}</span>
             </div>
 
-            <template v-if="!editMode">
+            <!-- The wrapper (not the inner button) carries the draggable/drag-event contract, so
+                 it stays the single element both drag-and-drop and the row-shift animation key
+                 off of; the name button and the kebab are independent siblings inside it, since a
+                 button can't nest another button. -->
+            <div
+              :ref="(el) => setMealBtnRef(index, el)"
+              class="meal-btn"
+              data-testid="meal-btn"
+              :class="{
+                'meal-btn--empty': !day.recipe,
+                'meal-btn--dragging': draggingIndex === index,
+                'meal-btn--drop-target': dragOverRowIndex === index,
+              }"
+              :draggable="isDragSource(day)"
+              @dragstart="onDragStart(index, $event)"
+              @dragover="onRowDragOver(index, $event)"
+              @dragleave="onRowDragLeave(index)"
+              @drop="onRowDrop(index, $event)"
+              @dragend="onDragEnd"
+            >
               <!-- An empty day now offers to fill itself rather than rendering as a
                    disabled-looking blank button. -->
               <v-btn
-                :ref="(el) => setMealBtnRef(index, el)"
                 variant="tonal"
                 density="compact"
-                class="meal-btn"
-                data-testid="meal-btn"
-                :class="{
-                  'meal-btn--empty': !day.recipe,
-                  'meal-btn--dragging': draggingIndex === index,
-                  'meal-btn--drop-target': dragOverRowIndex === index,
-                }"
+                class="meal-name-btn"
                 :color="day.recipe ? undefined : 'primary'"
                 :prepend-icon="day.recipe ? undefined : mdiPlus"
-                :draggable="isDragSource(day)"
                 @click="
                   day.recipe
                     ? router.push({ name: 'recipe-detail', params: { id: day.recipe.id } })
-                    : (editMode = true)
+                    : openEditDialog(day.iso)
                 "
-                @dragstart="onDragStart(index, $event)"
-                @dragover="onRowDragOver(index, $event)"
-                @dragleave="onRowDragLeave(index)"
-                @drop="onRowDrop(index, $event)"
-                @dragend="onDragEnd"
               >
-                <span class="meal-btn__label">{{ day.recipe?.name ?? 'Add meal' }}</span>
+                <span class="meal-name-btn__label">{{ day.recipe?.name ?? 'Add meal' }}</span>
               </v-btn>
-            </template>
 
-            <v-autocomplete
-              v-else
-              :model-value="day.selectedRecipeId"
-              :items="recipeSelectItems"
-              item-title="title"
-              item-value="value"
-              :custom-filter="recipeFilter"
-              placeholder="— No meal —"
-              density="compact"
-              hide-details
-              clearable
-              @update:model-value="(v: string | null) => onRecipeChange(day.iso, v)"
-              @update:search="(v: string) => (searchText = v)"
-            >
-              <template #item="{ item, props: itemProps }">
-                <v-list-item v-bind="itemProps" :title="undefined">
-                  <template #title>
-                    <span
-                      v-for="(seg, i) in highlightInfixMatches(item.title, searchText)"
-                      :key="i"
-                      :class="{ 'search-match': seg.matched }"
-                      >{{ seg.text }}</span
-                    >
-                    <v-icon
-                      v-if="item.favourite"
-                      :icon="mdiStar"
-                      color="yellow-darken-2"
-                      size="small"
-                      class="ml-2"
-                    />
-                  </template>
-                  <template #subtitle>
-                    <div
-                      v-for="(line, i) in usageLines(item.value, day.iso)"
-                      :key="i"
-                      class="last-used text-disabled"
-                    >
-                      {{ line }}
-                    </div>
-                  </template>
-                  <div v-if="item.labels.length" class="d-flex flex-wrap ga-1 mt-1">
-                    <v-chip
-                      v-for="label in item.labels"
-                      :key="label"
-                      size="x-small"
-                      color="primary"
-                    >
-                      {{ label }}
-                    </v-chip>
-                  </div>
-                </v-list-item>
-              </template>
-            </v-autocomplete>
+              <v-menu v-if="day.recipe">
+                <template #activator="{ props: menuProps }">
+                  <v-btn
+                    :icon="mdiDotsVertical"
+                    variant="text"
+                    size="small"
+                    class="meal-kebab"
+                    data-testid="meal-kebab"
+                    :aria-label="`More actions for ${day.weekday} ${day.date}`"
+                    v-bind="menuProps"
+                  />
+                </template>
+                <v-list density="compact">
+                  <v-list-item
+                    :prepend-icon="mdiPencil"
+                    title="Edit meal"
+                    data-testid="edit-meal-item"
+                    @click="openEditDialog(day.iso)"
+                  />
+                </v-list>
+              </v-menu>
+            </div>
           </div>
 
           <div class="row-grid notes-row">
@@ -476,7 +460,6 @@ function saveNote() {
           </div>
         </div>
         <div
-          v-if="!editMode"
           class="insert-zone"
           data-testid="insert-zone"
           :class="{ 'insert-zone--active': dragOverZoneIndex === index + 1 }"
@@ -513,21 +496,69 @@ function saveNote() {
       </v-card>
     </v-dialog>
 
-    <!-- Editing the week is this screen's primary action, so it sits where Recipes puts its own:
-         a bottom-right FAB. Confirming an edit uses the same position rather than sending the
-         user back up to a toolbar. -->
-    <v-btn
-      :icon="editMode ? mdiCheck : mdiPencil"
-      color="primary"
-      class="fab"
-      :class="{ 'fab--raised': snackbarVisible }"
-      size="large"
-      elevation="4"
-      :aria-label="editMode ? 'Done editing meal plan' : 'Edit meal plan'"
-      :aria-pressed="editMode"
-      data-testid="toggle-edit-mode"
-      @click="editMode = !editMode"
-    />
+    <v-dialog v-model="editDialog">
+      <v-card>
+        <v-card-title v-if="editDialogDay">
+          Edit meal — {{ editDialogDay.weekday }} {{ editDialogDay.date }}
+        </v-card-title>
+        <v-card-text>
+          <v-autocomplete
+            :model-value="editDialogDay?.selectedRecipeId ?? null"
+            :items="recipeSelectItems"
+            item-title="title"
+            item-value="value"
+            :custom-filter="recipeFilter"
+            placeholder="— No meal —"
+            density="compact"
+            hide-details
+            clearable
+            autofocus
+            @update:model-value="onEditDialogRecipeChange"
+            @update:search="(v: string) => (searchText = v)"
+          >
+            <template #item="{ item, props: itemProps }">
+              <v-list-item v-bind="itemProps" :title="undefined">
+                <template #title>
+                  <span
+                    v-for="(seg, i) in highlightInfixMatches(item.title, searchText)"
+                    :key="i"
+                    :class="{ 'search-match': seg.matched }"
+                    >{{ seg.text }}</span
+                  >
+                  <v-icon
+                    v-if="item.favourite"
+                    :icon="mdiStar"
+                    color="yellow-darken-2"
+                    size="small"
+                    class="ml-2"
+                  />
+                </template>
+                <template #subtitle>
+                  <div
+                    v-for="(line, i) in usageLines(item.value, editDialogDate)"
+                    :key="i"
+                    class="last-used text-disabled"
+                  >
+                    {{ line }}
+                  </div>
+                </template>
+                <div v-if="item.labels.length" class="d-flex flex-wrap ga-1 mt-1">
+                  <v-chip v-for="label in item.labels" :key="label" size="x-small" color="primary">
+                    {{ label }}
+                  </v-chip>
+                </div>
+              </v-list-item>
+            </template>
+          </v-autocomplete>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" data-testid="close-edit-dialog" @click="editDialog = false">
+            Close
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -557,26 +588,12 @@ function saveNote() {
 .day-label {
   min-width: 0;
 }
+/* The drag source / drop target: a plain flex row housing the name button and the kebab as
+   independent siblings (a button can't nest another button). */
 .meal-btn {
-  justify-content: flex-start;
-  /* Overrides VBtn's size-derived min-width so the button can shrink with its column. */
+  display: flex;
+  align-items: center;
   min-width: 0;
-}
-/* .v-btn__content is a flex container that centres its children, so text-overflow can never
-   apply to it — a long name would overflow both edges and get clipped mid-word. Let it shrink
-   and align left; the truncation happens on the label span inside it. */
-.meal-btn :deep(.v-btn__content) {
-  min-width: 0;
-  justify-content: flex-start;
-}
-.meal-btn__label {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.meal-btn--empty {
-  opacity: 0.75;
 }
 .meal-btn[draggable='true'] {
   cursor: grab;
@@ -587,6 +604,32 @@ function saveNote() {
 .meal-btn--drop-target {
   outline: 2px dashed rgb(var(--v-theme-primary));
   outline-offset: 2px;
+  border-radius: 20px;
+}
+.meal-name-btn {
+  justify-content: flex-start;
+  /* Overrides VBtn's size-derived min-width so the button can shrink with its column. */
+  min-width: 0;
+  flex: 1 1 auto;
+}
+/* .v-btn__content is a flex container that centres its children, so text-overflow can never
+   apply to it — a long name would overflow both edges and get clipped mid-word. Let it shrink
+   and align left; the truncation happens on the label span inside it. */
+.meal-name-btn :deep(.v-btn__content) {
+  min-width: 0;
+  justify-content: flex-start;
+}
+.meal-name-btn__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.meal-btn--empty .meal-name-btn {
+  opacity: 0.75;
+}
+.meal-kebab {
+  flex-shrink: 0;
 }
 /* A near-invisible strip between rows that grows into a solid insertion line while a drag hovers
    over it, so users can tell "drop between" apart from "drop on" without extra UI chrome. */

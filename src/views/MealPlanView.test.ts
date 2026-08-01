@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { mount, enableAutoUnmount, flushPromises } from '@vue/test-utils'
+import { mount, enableAutoUnmount, flushPromises, DOMWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { VAutocomplete } from 'vuetify/components'
-import { mdiPencil, mdiStar, mdiChevronLeft, mdiChevronRight, mdiCheck } from '@mdi/js'
+import { mdiStar, mdiChevronLeft, mdiChevronRight } from '@mdi/js'
 import MealPlanView from './MealPlanView.vue'
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
@@ -50,13 +50,12 @@ describe('MealPlanView favourite indicator', () => {
       attachTo: document.body,
     })
 
-    wrapper
-      .find(iconSelector(mdiPencil))
-      .element.closest('button')
-      ?.dispatchEvent(new Event('click'))
-    await wrapper.vm.$nextTick()
+    // Every day starts empty, so tapping the first day's chip opens the edit dialog directly.
+    await wrapper.findAll('[data-testid="meal-btn"] button')[0].trigger('click')
+    await flushPromises()
 
-    const input = wrapper.find('input')
+    // The autocomplete lives inside the teleported dialog, outside the wrapper's own DOM tree.
+    const input = new DOMWrapper(document.querySelector('input')!)
     await input.trigger('mousedown')
     await input.trigger('focus')
     await new Promise((resolve) => setTimeout(resolve, 50))
@@ -92,13 +91,12 @@ describe('MealPlanView recipe labels', () => {
       attachTo: document.body,
     })
 
-    wrapper
-      .find(iconSelector(mdiPencil))
-      .element.closest('button')
-      ?.dispatchEvent(new Event('click'))
-    await wrapper.vm.$nextTick()
+    // Every day starts empty, so tapping the first day's chip opens the edit dialog directly.
+    await wrapper.findAll('[data-testid="meal-btn"] button')[0].trigger('click')
+    await flushPromises()
 
-    const input = wrapper.find('input')
+    // The autocomplete lives inside the teleported dialog, outside the wrapper's own DOM tree.
+    const input = new DOMWrapper(document.querySelector('input')!)
     await input.trigger('mousedown')
     await input.trigger('focus')
     await new Promise((resolve) => setTimeout(resolve, 50))
@@ -182,7 +180,7 @@ describe('MealPlanView week navigation', () => {
     wrapper.unmount()
   })
 
-  it('exits edit mode when navigating to a different week', async () => {
+  it('closes the edit dialog when navigating to a different week', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const router = makeRouter()
@@ -190,15 +188,13 @@ describe('MealPlanView week navigation', () => {
     await router.isReady()
 
     const wrapper = mount(MealPlanView, { global: { plugins: [router, pinia] } })
-    clickIconButton(wrapper, mdiPencil)
-    await wrapper.vm.$nextTick()
-    expect(wrapper.find(iconSelector(mdiCheck)).exists()).toBe(true)
+    await wrapper.findAll('[data-testid="meal-btn"] button')[0].trigger('click')
+    expect(wrapper.vm.editDialog).toBe(true)
 
     clickIconButton(wrapper, mdiChevronRight)
-    await wrapper.vm.$nextTick()
+    await flushPromises()
 
-    expect(wrapper.find(iconSelector(mdiPencil)).exists()).toBe(true)
-    expect(wrapper.find(iconSelector(mdiCheck)).exists()).toBe(false)
+    expect(wrapper.vm.editDialog).toBe(false)
 
     wrapper.unmount()
   })
@@ -303,7 +299,7 @@ describe('MealPlanView swipe navigation', () => {
     wrapper.unmount()
   })
 
-  it('exits edit mode when navigating to a different week via swipe', async () => {
+  it('closes the edit dialog when navigating to a different week via swipe', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const router = makeRouter()
@@ -311,14 +307,12 @@ describe('MealPlanView swipe navigation', () => {
     await router.isReady()
 
     const wrapper = mount(MealPlanView, { global: { plugins: [router, pinia] } })
-    clickIconButton(wrapper, mdiPencil)
-    await wrapper.vm.$nextTick()
-    expect(wrapper.find(iconSelector(mdiCheck)).exists()).toBe(true)
+    await wrapper.findAll('[data-testid="meal-btn"] button')[0].trigger('click')
+    expect(wrapper.vm.editDialog).toBe(true)
 
     await swipe({ x: 300, y: 200 }, { x: 200, y: 205 })
 
-    expect(wrapper.find(iconSelector(mdiPencil)).exists()).toBe(true)
-    expect(wrapper.find(iconSelector(mdiCheck)).exists()).toBe(false)
+    expect(wrapper.vm.editDialog).toBe(false)
 
     wrapper.unmount()
   })
@@ -373,20 +367,147 @@ describe('MealPlanView recipe assignment', () => {
     await router.isReady()
 
     const wrapper = mount(MealPlanView, { global: { plugins: [router, pinia] } })
-    clickIconButton(wrapper, mdiPencil)
-    await wrapper.vm.$nextTick()
 
-    // The first day of the displayed week is Monday, 2026-06-15.
+    // The first day of the displayed week is Monday, 2026-06-15; it starts empty, so tapping its
+    // chip opens the edit dialog directly.
     const monday = '2026-06-15'
-    const firstPicker = wrapper.findAllComponents(VAutocomplete)[0]
-
-    firstPicker.vm.$emit('update:model-value', recipe.id)
+    await wrapper.findAll('[data-testid="meal-btn"] button')[0].trigger('click')
     await wrapper.vm.$nextTick()
+
+    wrapper.findComponent(VAutocomplete).vm.$emit('update:model-value', recipe.id)
+    await flushPromises()
     expect(mealPlan.getForDate(monday)?.recipeId).toBe(recipe.id)
+    expect(wrapper.vm.editDialog).toBe(false)
 
-    firstPicker.vm.$emit('update:model-value', null)
-    await wrapper.vm.$nextTick()
+    // Monday is now filled, so reopen the dialog via its kebab menu to clear the assignment.
+    await wrapper.find('[data-testid="meal-kebab"]').trigger('click')
+    await flushPromises()
+    // The menu's list item is teleported outside the wrapper's own DOM tree.
+    document.querySelector<HTMLElement>('[data-testid="edit-meal-item"]')?.click()
+    await flushPromises()
+
+    wrapper.findComponent(VAutocomplete).vm.$emit('update:model-value', null)
+    await flushPromises()
     expect(mealPlan.getForDate(monday)).toBeUndefined()
+
+    wrapper.unmount()
+  })
+})
+
+describe('MealPlanView meal kebab menu', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    setActivePinia(createPinia())
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-17T12:00:00'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('only shows the kebab on days that have a recipe assigned', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const recipes = useRecipesStore()
+    const mealPlan = useMealPlanStore()
+    const recipe = recipes.addRecipe({ name: 'Stew', ingredients: [], servings: 2 })
+    // Monday 2026-06-15 is filled, Tuesday 2026-06-16 stays empty.
+    mealPlan.assign('2026-06-15', recipe.id)
+
+    const router = makeRouter()
+    router.push({ name: 'meal-plan' })
+    await router.isReady()
+
+    const wrapper = mount(MealPlanView, { global: { plugins: [router, pinia] } })
+    const rows = wrapper.findAll('[data-testid="meal-btn"]')
+
+    expect(rows[0].find('[data-testid="meal-kebab"]').exists()).toBe(true)
+    expect(rows[1].find('[data-testid="meal-kebab"]').exists()).toBe(false)
+
+    wrapper.unmount()
+  })
+
+  it('navigates to the recipe detail view when a filled day is tapped', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const recipes = useRecipesStore()
+    const mealPlan = useMealPlanStore()
+    const recipe = recipes.addRecipe({ name: 'Stew', ingredients: [], servings: 2 })
+    mealPlan.assign('2026-06-15', recipe.id)
+
+    const router = makeRouter()
+    router.push({ name: 'meal-plan' })
+    await router.isReady()
+
+    const wrapper = mount(MealPlanView, { global: { plugins: [router, pinia] } })
+    await wrapper.findAll('[data-testid="meal-btn"] button')[0].trigger('click')
+
+    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('recipe-detail'))
+    expect(router.currentRoute.value.params.id).toBe(recipe.id)
+    expect(wrapper.vm.editDialog).toBe(false)
+
+    wrapper.unmount()
+  })
+
+  it('opens the edit dialog pre-filled with the current recipe via the kebab menu', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const recipes = useRecipesStore()
+    const mealPlan = useMealPlanStore()
+    const recipe = recipes.addRecipe({ name: 'Stew', ingredients: [], servings: 2 })
+    mealPlan.assign('2026-06-15', recipe.id)
+
+    const router = makeRouter()
+    router.push({ name: 'meal-plan' })
+    await router.isReady()
+
+    const wrapper = mount(MealPlanView, {
+      global: { plugins: [router, pinia] },
+      attachTo: document.body,
+    })
+
+    await wrapper.find('[data-testid="meal-kebab"]').trigger('click')
+    await flushPromises()
+    // The menu's list item is teleported outside the wrapper's own DOM tree.
+    document.querySelector<HTMLElement>('[data-testid="edit-meal-item"]')?.click()
+    await flushPromises()
+
+    expect(wrapper.vm.editDialog).toBe(true)
+    expect(wrapper.vm.editDialogDate).toBe('2026-06-15')
+    expect(wrapper.findComponent(VAutocomplete).props('modelValue')).toBe(recipe.id)
+
+    wrapper.unmount()
+  })
+
+  it('closes the edit dialog without changing the assignment when Close is clicked', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const recipes = useRecipesStore()
+    const mealPlan = useMealPlanStore()
+    const recipe = recipes.addRecipe({ name: 'Stew', ingredients: [], servings: 2 })
+    mealPlan.assign('2026-06-15', recipe.id)
+
+    const router = makeRouter()
+    router.push({ name: 'meal-plan' })
+    await router.isReady()
+
+    const wrapper = mount(MealPlanView, {
+      global: { plugins: [router, pinia] },
+      attachTo: document.body,
+    })
+
+    await wrapper.find('[data-testid="meal-kebab"]').trigger('click')
+    await flushPromises()
+    // The menu's list item is teleported outside the wrapper's own DOM tree.
+    document.querySelector<HTMLElement>('[data-testid="edit-meal-item"]')?.click()
+    await flushPromises()
+
+    document.querySelector<HTMLElement>('[data-testid="close-edit-dialog"]')?.click()
+    await flushPromises()
+
+    expect(wrapper.vm.editDialog).toBe(false)
+    expect(mealPlan.getForDate('2026-06-15')?.recipeId).toBe(recipe.id)
 
     wrapper.unmount()
   })
@@ -527,20 +648,6 @@ describe('MealPlanView drag and drop reorder', () => {
     // the rendered meal buttons; every other test in this block only queries the wrapper itself.
     return mount(MealPlanView, { global: { plugins: [router, pinia] }, attachTo: document.body })
   }
-
-  it('hides meal buttons and insert zones while in edit mode', async () => {
-    const pinia = createPinia()
-    setActivePinia(pinia)
-    const wrapper = await mountView(pinia)
-
-    clickIconButton(wrapper, mdiPencil)
-    await wrapper.vm.$nextTick()
-
-    expect(wrapper.find('[data-testid="meal-btn"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="insert-zone"]').exists()).toBe(false)
-
-    wrapper.unmount()
-  })
 
   it('ignores a dragstart fired on an unplanned day even if forced', async () => {
     const pinia = createPinia()
@@ -849,10 +956,12 @@ describe('MealPlanView recipe filtering', () => {
       attachTo: document.body,
     })
 
-    clickIconButton(wrapper, mdiPencil)
-    await wrapper.vm.$nextTick()
+    // Every day starts empty, so tapping the first day's chip opens the edit dialog directly.
+    await wrapper.findAll('[data-testid="meal-btn"] button')[0].trigger('click')
+    await flushPromises()
 
-    const input = wrapper.find('input')
+    // The autocomplete lives inside the teleported dialog, outside the wrapper's own DOM tree.
+    const input = new DOMWrapper(document.querySelector('input')!)
     await input.trigger('mousedown')
     await input.trigger('focus')
     // "spicy" only appears as a label on Tagged Curry, never in either title,

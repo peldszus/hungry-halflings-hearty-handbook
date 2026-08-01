@@ -286,9 +286,11 @@ Material app. Expressing the day rows as M3 list items with a leading date eleme
 today with `primary-container`, brings it back into the system. Empty days currently render as a
 disabled-looking button; they need a clear "Add meal" affordance.
 
-The separate edit-mode toggle is a workaround for rows not being directly editable. Making rows
-tappable-to-assign would remove a whole mode from the app, but it is the largest behavioural change
-proposed here and can be deferred.
+The separate whole-week edit-mode toggle has been removed. A filled day still navigates straight to
+the recipe's detail view on tap (the most frequent action on this screen); a trailing kebab on the
+chip opens a menu leading to a per-day "Edit meal" dialog, and tapping an empty day opens that same
+dialog directly. This frees the FAB, previously spent on the edit-mode toggle, for the planned
+automatic meal-recommendation feature.
 
 ### Shopping list — noted, deferred
 
