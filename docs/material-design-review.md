@@ -283,12 +283,14 @@ form requires scrolling to reach; a bottom app bar action keeps it always availa
 
 Conceptually the strongest screen, visually the weakest — it is largely custom-built markup inside a
 Material app. Expressing the day rows as M3 list items with a leading date element, and highlighting
-today with `primary-container`, brings it back into the system. Empty days currently render as a
-disabled-looking button; they need a clear "Add meal" affordance.
+today with `primary-container`, brings it back into the system.
 
-The separate edit-mode toggle is a workaround for rows not being directly editable. Making rows
-tappable-to-assign would remove a whole mode from the app, but it is the largest behavioural change
-proposed here and can be deferred.
+The separate whole-week edit-mode toggle has been removed. A filled day still navigates straight to
+the recipe's detail view on tap (the most frequent action on this screen); a trailing pencil icon,
+merged into the same chip, opens a per-day "Edit meal" dialog directly (no intermediate menu — it
+only ever led to one action). Empty days show the same chip with a plain plus icon in that spot
+instead, and tapping anywhere on the chip opens the dialog directly. This frees the FAB, previously
+spent on the edit-mode toggle, for the planned automatic meal-recommendation feature.
 
 ### Shopping list — noted, deferred
 

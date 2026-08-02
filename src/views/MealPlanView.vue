@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   mdiChevronLeft,
   mdiChevronRight,
-  mdiCheck,
   mdiPencil,
   mdiStar,
   mdiNoteTextOutline,
@@ -14,24 +13,21 @@ import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
 import { highlightInfixMatches } from '@/utils/highlight'
 import { computeSwapShifts, computeMoveShifts } from '@/utils/dragShift'
-import { useSnackbar } from '@/composables/useSnackbar'
 import { formatAssignmentUsageLines } from '@/utils/relativeTime'
 
 const router = useRouter()
 const recipesStore = useRecipesStore()
 const mealPlanStore = useMealPlanStore()
 
-// Material lifts the FAB out of the way while a snackbar is showing.
-const { visible: snackbarVisible } = useSnackbar()
-
 const weekOffset = ref(0)
-const editMode = ref(false)
 const searchText = ref('')
+const editDialog = ref(false)
+const editDialogDate = ref('')
 
 const mealListEl = ref<HTMLElement | null>(null)
 
 watch(weekOffset, async (newOffset, oldOffset) => {
-  editMode.value = false
+  if (editDialog.value) closeEditDialog()
   await nextTick()
   animateWeekTransition(newOffset > oldOffset ? 1 : -1)
 })
@@ -166,6 +162,42 @@ function onRecipeChange(date: string, value: string | null) {
   }
 }
 
+const editDialogDay = computed(() => weekDays.value.find((d) => d.iso === editDialogDate.value))
+const editDialogSelection = ref<string | null>(null)
+
+function openEditDialog(date: string) {
+  editDialogDate.value = date
+  editDialogSelection.value = mealPlanStore.getForDate(date)?.recipeId ?? null
+  editDialog.value = true
+}
+
+// Clearing the field (the autocomplete's built-in "x") only resets what's being searched for, so
+// the user can pick something else without it immediately unassigning the day — it doesn't commit
+// on its own. Picking an actual recipe still commits and closes immediately, the fast path for the
+// common case; a field left empty is only applied when the dialog is closed, in closeEditDialog.
+function onEditDialogRecipeChange(value: string | null) {
+  editDialogSelection.value = value
+  if (!value) return
+  onRecipeChange(editDialogDate.value, value)
+  editDialog.value = false
+}
+
+function removeEditDialogMeal() {
+  onRecipeChange(editDialogDate.value, null)
+  editDialogSelection.value = null
+  editDialog.value = false
+}
+
+// Closing applies whatever's currently in the field if it differs from what's stored — in
+// practice that only ever means a cleared-then-closed field, since picking a recipe already
+// commits and closes on its own above.
+function closeEditDialog() {
+  if (editDialogSelection.value !== (editDialogDay.value?.selectedRecipeId ?? null)) {
+    onRecipeChange(editDialogDate.value, editDialogSelection.value)
+  }
+  editDialog.value = false
+}
+
 type WeekDay = (typeof weekDays)['value'][number]
 
 // Dragging is only offered for days with something to move; an empty or day-note-only day has
@@ -199,7 +231,54 @@ function onDragEnd() {
   draggingIndex.value = null
   dragOverRowIndex.value = null
   dragOverZoneIndex.value = null
+  // A native drag never fires a blur on the button it started from, so it can keep browser focus
+  // through the whole gesture and into whatever content later gets swapped into that row. This is
+  // independent of the animated-swap hover issue below, so it's safe to clear immediately.
+  const activeElement = document.activeElement
+  if (activeElement instanceof HTMLElement && activeElement.closest('.meal-btn')) {
+    activeElement.blur()
+  }
 }
+
+// The row-shift animation below moves a row's pixels under the pointer mid-transition even though
+// the pointer itself never moves, so the browser's :hover hit-test can end up matching that row
+// while it passes underneath — a real, correct match at that instant. The mismatch appears once
+// the transform settles back to rest: without a further mouse move, browsers don't re-run hit
+// testing on their own, so the row keeps showing its Vuetify state-layer overlay
+// (`.v-btn:hover > .v-btn__overlay`, driven purely by the CSS :hover pseudo-class, not JS state)
+// even though the pointer is no longer over it. Since rows are keyed by date rather than content,
+// that stuck overlay then sits over whichever meal got swapped into the slot, looking like the
+// dragged meal stayed highlighted.
+//
+// Forcing a reflow between toggling pointer-events off and back on does *not* reliably invalidate
+// a stale :hover match (confirmed against real Chromium — the overlay stayed put). Per spec,
+// though, an element with pointer-events: none can never match :hover at all, so disabling it
+// outright removes the stuck overlay regardless of the browser's hit-test cache. It's held off
+// until the next genuine mouse movement — the same event that would have naturally corrected the
+// stale match anyway — rather than reverted immediately, with a short timeout as a fallback for
+// touch-only input that never fires one.
+let clearHoverSuppression: (() => void) | null = null
+
+function resetStaleHover() {
+  const list = mealListEl.value
+  if (!list) return
+  clearHoverSuppression?.()
+
+  list.style.pointerEvents = 'none'
+  const restore = () => {
+    list.style.pointerEvents = ''
+    window.removeEventListener('mousemove', restore)
+    clearTimeout(timeoutId)
+    clearHoverSuppression = null
+  }
+  const timeoutId = window.setTimeout(restore, 1000)
+  window.addEventListener('mousemove', restore, { once: true })
+  clearHoverSuppression = restore
+}
+
+onUnmounted(() => {
+  clearHoverSuppression?.()
+})
 
 function onRowDragOver(index: number, event: DragEvent) {
   if (draggingIndex.value === null || index === draggingIndex.value) return
@@ -239,15 +318,24 @@ function animateShift(shifts: Map<number, number>) {
   if (prefersReducedMotion()) return
   const pitch = rowPitch()
   if (!pitch) return
+  const animations: Animation[] = []
   shifts.forEach((rowsTravelled, index) => {
     if (rowsTravelled === 0) return
     const el = mealBtnRefs.value[index]
     if (!el || typeof el.animate !== 'function') return
-    el.animate(
-      [{ transform: `translateY(${rowsTravelled * pitch}px)` }, { transform: 'translateY(0)' }],
-      { duration: 220, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }
+    animations.push(
+      el.animate(
+        [{ transform: `translateY(${rowsTravelled * pitch}px)` }, { transform: 'translateY(0)' }],
+        { duration: 220, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }
+      )
     )
   })
+  // The row(s) that animate pass under the pointer mid-transition even though the pointer itself
+  // never moves, which is what leaves a stale :hover match once they settle back to rest — resetting
+  // only makes sense once the transform is actually done, not right away.
+  Promise.all(animations.map((a) => a.finished))
+    .then(resetStaleHover)
+    .catch(() => {})
 }
 
 async function onRowDrop(index: number, event: DragEvent) {
@@ -307,6 +395,8 @@ function saveNote() {
   }
   noteDialog.value = false
 }
+
+defineExpose({ editDialog, editDialogDate })
 </script>
 
 <template>
@@ -335,7 +425,6 @@ function saveNote() {
 
     <div ref="mealListEl" class="meal-plan-list">
       <div
-        v-if="!editMode"
         class="insert-zone"
         data-testid="insert-zone"
         :class="{ 'insert-zone--active': dragOverZoneIndex === 0 }"
@@ -355,91 +444,61 @@ function saveNote() {
               <span class="text-caption text-medium-emphasis ml-1">{{ day.date }}</span>
             </div>
 
-            <template v-if="!editMode">
+            <!-- The wrapper (not the inner button) carries the draggable/drag-event contract and
+                 the chip's own tonal background, so it stays the single element both
+                 drag-and-drop and the row-shift animation key off of, and reads as one merged
+                 chip rather than two adjacent controls; the name button and the edit button are
+                 independent siblings inside it, since a button can't nest another button. -->
+            <div
+              :ref="(el) => setMealBtnRef(index, el)"
+              class="meal-btn bg-surface-container-high"
+              data-testid="meal-btn"
+              :class="{
+                'meal-btn--dragging': draggingIndex === index,
+                'meal-btn--drop-target': dragOverRowIndex === index,
+              }"
+              :draggable="isDragSource(day)"
+              @dragstart="onDragStart(index, $event)"
+              @dragover="onRowDragOver(index, $event)"
+              @dragleave="onRowDragLeave(index)"
+              @drop="onRowDrop(index, $event)"
+              @dragend="onDragEnd"
+            >
               <!-- An empty day now offers to fill itself rather than rendering as a
-                   disabled-looking blank button. -->
+                   disabled-looking blank button; the plus indicator lives in the trailing icon
+                   button below, so this stays a plain (if blank) tap target for it. -->
               <v-btn
-                :ref="(el) => setMealBtnRef(index, el)"
-                variant="tonal"
+                variant="text"
                 density="compact"
-                class="meal-btn"
-                data-testid="meal-btn"
-                :class="{
-                  'meal-btn--empty': !day.recipe,
-                  'meal-btn--dragging': draggingIndex === index,
-                  'meal-btn--drop-target': dragOverRowIndex === index,
-                }"
-                :color="day.recipe ? undefined : 'primary'"
-                :prepend-icon="day.recipe ? undefined : mdiPlus"
-                :draggable="isDragSource(day)"
+                class="meal-name-btn"
                 @click="
                   day.recipe
                     ? router.push({ name: 'recipe-detail', params: { id: day.recipe.id } })
-                    : (editMode = true)
+                    : openEditDialog(day.iso)
                 "
-                @dragstart="onDragStart(index, $event)"
-                @dragover="onRowDragOver(index, $event)"
-                @dragleave="onRowDragLeave(index)"
-                @drop="onRowDrop(index, $event)"
-                @dragend="onDragEnd"
               >
-                <span class="meal-btn__label">{{ day.recipe?.name ?? 'Add meal' }}</span>
+                <span class="meal-name-btn__label">{{ day.recipe?.name }}</span>
               </v-btn>
-            </template>
 
-            <v-autocomplete
-              v-else
-              :model-value="day.selectedRecipeId"
-              :items="recipeSelectItems"
-              item-title="title"
-              item-value="value"
-              :custom-filter="recipeFilter"
-              placeholder="— No meal —"
-              density="compact"
-              hide-details
-              clearable
-              @update:model-value="(v: string | null) => onRecipeChange(day.iso, v)"
-              @update:search="(v: string) => (searchText = v)"
-            >
-              <template #item="{ item, props: itemProps }">
-                <v-list-item v-bind="itemProps" :title="undefined">
-                  <template #title>
-                    <span
-                      v-for="(seg, i) in highlightInfixMatches(item.title, searchText)"
-                      :key="i"
-                      :class="{ 'search-match': seg.matched }"
-                      >{{ seg.text }}</span
-                    >
-                    <v-icon
-                      v-if="item.favourite"
-                      :icon="mdiStar"
-                      color="yellow-darken-2"
-                      size="small"
-                      class="ml-2"
-                    />
-                  </template>
-                  <template #subtitle>
-                    <div
-                      v-for="(line, i) in usageLines(item.value, day.iso)"
-                      :key="i"
-                      class="last-used text-disabled"
-                    >
-                      {{ line }}
-                    </div>
-                  </template>
-                  <div v-if="item.labels.length" class="d-flex flex-wrap ga-1 mt-1">
-                    <v-chip
-                      v-for="label in item.labels"
-                      :key="label"
-                      size="x-small"
-                      color="primary"
-                    >
-                      {{ label }}
-                    </v-chip>
-                  </div>
-                </v-list-item>
-              </template>
-            </v-autocomplete>
+              <v-btn
+                icon
+                variant="text"
+                density="compact"
+                class="meal-edit-btn"
+                data-testid="meal-edit-btn"
+                :color="day.recipe ? undefined : 'primary'"
+                :aria-label="
+                  day.recipe
+                    ? `Edit meal for ${day.weekday} ${day.date}`
+                    : `Add meal for ${day.weekday} ${day.date}`
+                "
+                @click="openEditDialog(day.iso)"
+              >
+                <!-- mdiPencil's diagonal silhouette reads taller than mdiPlus's cross at the same
+                     nominal size, so it needs an explicitly smaller size to look equal-weight. -->
+                <v-icon :icon="day.recipe ? mdiPencil : mdiPlus" :size="day.recipe ? 18 : 22" />
+              </v-btn>
+            </div>
           </div>
 
           <div class="row-grid notes-row">
@@ -476,7 +535,6 @@ function saveNote() {
           </div>
         </div>
         <div
-          v-if="!editMode"
           class="insert-zone"
           data-testid="insert-zone"
           :class="{ 'insert-zone--active': dragOverZoneIndex === index + 1 }"
@@ -487,7 +545,7 @@ function saveNote() {
       </template>
     </div>
 
-    <v-dialog v-model="noteDialog">
+    <v-dialog v-model="noteDialog" location="top center">
       <v-card>
         <v-card-title>{{ noteDialogTitle }}</v-card-title>
         <v-card-text>
@@ -513,21 +571,78 @@ function saveNote() {
       </v-card>
     </v-dialog>
 
-    <!-- Editing the week is this screen's primary action, so it sits where Recipes puts its own:
-         a bottom-right FAB. Confirming an edit uses the same position rather than sending the
-         user back up to a toolbar. -->
-    <v-btn
-      :icon="editMode ? mdiCheck : mdiPencil"
-      color="primary"
-      class="fab"
-      :class="{ 'fab--raised': snackbarVisible }"
-      size="large"
-      elevation="4"
-      :aria-label="editMode ? 'Done editing meal plan' : 'Edit meal plan'"
-      :aria-pressed="editMode"
-      data-testid="toggle-edit-mode"
-      @click="editMode = !editMode"
-    />
+    <v-dialog v-model="editDialog" location="top center">
+      <v-card>
+        <v-card-title v-if="editDialogDay">
+          Edit meal — {{ editDialogDay.weekday }} {{ editDialogDay.date }}
+        </v-card-title>
+        <v-card-text>
+          <v-autocomplete
+            :model-value="editDialogSelection"
+            :items="recipeSelectItems"
+            item-title="title"
+            item-value="value"
+            :custom-filter="recipeFilter"
+            placeholder="— No meal —"
+            density="compact"
+            hide-details
+            clearable
+            autofocus
+            @update:model-value="onEditDialogRecipeChange"
+            @update:search="(v: string) => (searchText = v)"
+          >
+            <template #item="{ item, props: itemProps }">
+              <v-list-item v-bind="itemProps" :title="undefined">
+                <template #title>
+                  <span
+                    v-for="(seg, i) in highlightInfixMatches(item.title, searchText)"
+                    :key="i"
+                    :class="{ 'search-match': seg.matched }"
+                    >{{ seg.text }}</span
+                  >
+                  <v-icon
+                    v-if="item.favourite"
+                    :icon="mdiStar"
+                    color="yellow-darken-2"
+                    size="small"
+                    class="ml-2"
+                  />
+                </template>
+                <template #subtitle>
+                  <div
+                    v-for="(line, i) in usageLines(item.value, editDialogDate)"
+                    :key="i"
+                    class="last-used text-disabled"
+                  >
+                    {{ line }}
+                  </div>
+                </template>
+                <div v-if="item.labels.length" class="d-flex flex-wrap ga-1 mt-1">
+                  <v-chip v-for="label in item.labels" :key="label" size="x-small" color="primary">
+                    {{ label }}
+                  </v-chip>
+                </div>
+              </v-list-item>
+            </template>
+          </v-autocomplete>
+        </v-card-text>
+        <v-card-actions>
+          <v-btn
+            v-if="editDialogDay?.selectedRecipeId"
+            variant="text"
+            color="error"
+            data-testid="remove-meal"
+            @click="removeEditDialogMeal"
+          >
+            Remove meal
+          </v-btn>
+          <v-spacer />
+          <v-btn variant="text" data-testid="close-edit-dialog" @click="closeEditDialog">
+            Close
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -557,26 +672,17 @@ function saveNote() {
 .day-label {
   min-width: 0;
 }
+/* The drag source / drop target: a plain flex row carrying the chip's own tonal background (the
+   bg-surface-container-high utility class, same for an empty or a filled day) and housing the
+   name button and the edit button as independent siblings (a button can't nest another button) —
+   both switch to a transparent `text` variant so this background is the only one visible, reading
+   as one merged chip rather than two adjacent controls. */
 .meal-btn {
-  justify-content: flex-start;
-  /* Overrides VBtn's size-derived min-width so the button can shrink with its column. */
+  display: flex;
+  align-items: center;
   min-width: 0;
-}
-/* .v-btn__content is a flex container that centres its children, so text-overflow can never
-   apply to it — a long name would overflow both edges and get clipped mid-word. Let it shrink
-   and align left; the truncation happens on the label span inside it. */
-.meal-btn :deep(.v-btn__content) {
-  min-width: 0;
-  justify-content: flex-start;
-}
-.meal-btn__label {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.meal-btn--empty {
-  opacity: 0.75;
+  border-radius: 9999px;
+  padding-inline: 12px;
 }
 .meal-btn[draggable='true'] {
   cursor: grab;
@@ -587,6 +693,41 @@ function saveNote() {
 .meal-btn--drop-target {
   outline: 2px dashed rgb(var(--v-theme-primary));
   outline-offset: 2px;
+}
+.meal-name-btn {
+  justify-content: flex-start;
+  /* Overrides VBtn's size-derived min-width so the button can shrink with its column. */
+  min-width: 0;
+  flex: 1 1 auto;
+  padding-inline: 4px;
+}
+/* .v-btn__content is a flex container that centres its children, so text-overflow can never
+   apply to it — a long name would overflow both edges and get clipped mid-word. Let it shrink
+   and align left; the truncation happens on the label span inside it. */
+.meal-name-btn :deep(.v-btn__content) {
+  min-width: 0;
+  justify-content: flex-start;
+}
+.meal-name-btn__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.meal-edit-btn {
+  flex-shrink: 0;
+}
+/* Touch devices simulate :hover on tap and only clear it on the next tap elsewhere (no real
+   hovering pointer to move away with) — a distinct, older mobile-browser quirk from the
+   drag-animation hover mismatch handled in script above, and not fixable by the same JS:
+   touchscreens never fire a real `mousemove`, so that fix's suppression never lifts except via its
+   1s timeout fallback, after which the never-actually-cleared simulated hover reappears. Scoping
+   the state-layer rule to real hover-capable devices removes it at the source for touch instead. */
+@media (hover: none) {
+  .meal-name-btn:hover :deep(.v-btn__overlay),
+  .meal-edit-btn:hover :deep(.v-btn__overlay) {
+    opacity: 0 !important;
+  }
 }
 /* A near-invisible strip between rows that grows into a solid insertion line while a drag hovers
    over it, so users can tell "drop between" apart from "drop on" without extra UI chrome. */
