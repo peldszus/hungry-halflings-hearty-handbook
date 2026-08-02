@@ -220,16 +220,54 @@ function onDragEnd() {
   draggingIndex.value = null
   dragOverRowIndex.value = null
   dragOverZoneIndex.value = null
-  // The button that started the drag keeps browser focus through the whole gesture (a native
-  // drag never fires a blur on it), and since rows are keyed by date rather than content, that
-  // focus ring stays attached to the calendar slot rather than the dragged meal — it just shows
-  // whatever got swapped into that slot afterward. Clearing it here matches what a normal click
-  // would have done.
+  // A native drag never fires a blur on the button it started from, so it can keep browser focus
+  // through the whole gesture and into whatever content later gets swapped into that row. This is
+  // independent of the animated-swap hover issue below, so it's safe to clear immediately.
   const activeElement = document.activeElement
   if (activeElement instanceof HTMLElement && activeElement.closest('.meal-btn')) {
     activeElement.blur()
   }
 }
+
+// The row-shift animation below moves a row's pixels under the pointer mid-transition even though
+// the pointer itself never moves, so the browser's :hover hit-test can end up matching that row
+// while it passes underneath — a real, correct match at that instant. The mismatch appears once
+// the transform settles back to rest: without a further mouse move, browsers don't re-run hit
+// testing on their own, so the row keeps showing its Vuetify state-layer overlay
+// (`.v-btn:hover > .v-btn__overlay`, driven purely by the CSS :hover pseudo-class, not JS state)
+// even though the pointer is no longer over it. Since rows are keyed by date rather than content,
+// that stuck overlay then sits over whichever meal got swapped into the slot, looking like the
+// dragged meal stayed highlighted.
+//
+// Forcing a reflow between toggling pointer-events off and back on does *not* reliably invalidate
+// a stale :hover match (confirmed against real Chromium — the overlay stayed put). Per spec,
+// though, an element with pointer-events: none can never match :hover at all, so disabling it
+// outright removes the stuck overlay regardless of the browser's hit-test cache. It's held off
+// until the next genuine mouse movement — the same event that would have naturally corrected the
+// stale match anyway — rather than reverted immediately, with a short timeout as a fallback for
+// touch-only input that never fires one.
+let clearHoverSuppression: (() => void) | null = null
+
+function resetStaleHover() {
+  const list = mealListEl.value
+  if (!list) return
+  clearHoverSuppression?.()
+
+  list.style.pointerEvents = 'none'
+  const restore = () => {
+    list.style.pointerEvents = ''
+    window.removeEventListener('mousemove', restore)
+    clearTimeout(timeoutId)
+    clearHoverSuppression = null
+  }
+  const timeoutId = window.setTimeout(restore, 1000)
+  window.addEventListener('mousemove', restore, { once: true })
+  clearHoverSuppression = restore
+}
+
+onUnmounted(() => {
+  clearHoverSuppression?.()
+})
 
 function onRowDragOver(index: number, event: DragEvent) {
   if (draggingIndex.value === null || index === draggingIndex.value) return
@@ -269,15 +307,24 @@ function animateShift(shifts: Map<number, number>) {
   if (prefersReducedMotion()) return
   const pitch = rowPitch()
   if (!pitch) return
+  const animations: Animation[] = []
   shifts.forEach((rowsTravelled, index) => {
     if (rowsTravelled === 0) return
     const el = mealBtnRefs.value[index]
     if (!el || typeof el.animate !== 'function') return
-    el.animate(
-      [{ transform: `translateY(${rowsTravelled * pitch}px)` }, { transform: 'translateY(0)' }],
-      { duration: 220, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }
+    animations.push(
+      el.animate(
+        [{ transform: `translateY(${rowsTravelled * pitch}px)` }, { transform: 'translateY(0)' }],
+        { duration: 220, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }
+      )
     )
   })
+  // The row(s) that animate pass under the pointer mid-transition even though the pointer itself
+  // never moves, which is what leaves a stale :hover match once they settle back to rest — resetting
+  // only makes sense once the transform is actually done, not right away.
+  Promise.all(animations.map((a) => a.finished))
+    .then(resetStaleHover)
+    .catch(() => {})
 }
 
 async function onRowDrop(index: number, event: DragEvent) {

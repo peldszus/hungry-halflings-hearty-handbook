@@ -941,9 +941,11 @@ describe('MealPlanView drag and drop reorder', () => {
 
   // jsdom implements neither Element.animate nor window.matchMedia (confirmed while designing
   // this feature), so both are stubbed here purely to observe whether the component *tries* to
-  // animate - the row-index math itself is covered directly in dragShift.test.ts.
+  // animate - the row-index math itself is covered directly in dragShift.test.ts. The stub
+  // returns a `.finished` promise since a real Animation object always has one and the component
+  // awaits it to know when the row-shift transform has settled.
   function stubAnimateAndGeometry() {
-    const animateSpy = vi.fn()
+    const animateSpy = vi.fn(() => ({ finished: Promise.resolve() }))
     Object.defineProperty(HTMLElement.prototype, 'animate', {
       configurable: true,
       writable: true,
@@ -1019,6 +1021,42 @@ describe('MealPlanView drag and drop reorder', () => {
     } finally {
       restore()
       window.matchMedia = originalMatchMedia
+    }
+  })
+
+  it('suppresses hover on the list once the swap animation settles, until the next mouse move', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const recipes = useRecipesStore()
+    const mealPlan = useMealPlanStore()
+    const stew = recipes.addRecipe({ name: 'Stew', ingredients: [], servings: 2 })
+    const soup = recipes.addRecipe({ name: 'Soup', ingredients: [], servings: 2 })
+    mealPlan.assign(monday, stew.id)
+    mealPlan.assign(tuesday, soup.id)
+
+    const { restore } = stubAnimateAndGeometry()
+    try {
+      const wrapper = await mountView(pinia)
+      const buttons = wrapper.findAll('[data-testid="meal-btn"]')
+      const list = wrapper.find('.meal-plan-list').element as HTMLElement
+
+      await buttons[0].trigger('dragstart', { dataTransfer: dataTransferStub() })
+      await buttons[1].trigger('drop', { dataTransfer: dataTransferStub() })
+      await flushPromises()
+
+      // Real Chromium doesn't repaint :hover for a row that animates under the pointer mid-swap,
+      // leaving its state-layer overlay stuck once the transform settles back to rest (confirmed
+      // against a real browser — toggling pointer-events off and back on in the same tick does
+      // *not* clear it). Suppressing pointer-events until the next real mouse move sidesteps the
+      // stale match outright, since a suppressed element can never match :hover at all.
+      expect(list.style.pointerEvents).toBe('none')
+
+      window.dispatchEvent(new Event('mousemove'))
+      expect(list.style.pointerEvents).toBe('')
+
+      wrapper.unmount()
+    } finally {
+      restore()
     }
   })
 })
