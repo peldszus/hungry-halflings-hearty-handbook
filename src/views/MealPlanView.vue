@@ -4,7 +4,6 @@ import { useRouter } from 'vue-router'
 import {
   mdiChevronLeft,
   mdiChevronRight,
-  mdiDotsVertical,
   mdiPencil,
   mdiStar,
   mdiNoteTextOutline,
@@ -365,16 +364,18 @@ defineExpose({ editDialog, editDialogDate })
               <span class="text-caption text-medium-emphasis ml-1">{{ day.date }}</span>
             </div>
 
-            <!-- The wrapper (not the inner button) carries the draggable/drag-event contract, so
-                 it stays the single element both drag-and-drop and the row-shift animation key
-                 off of; the name button and the kebab are independent siblings inside it, since a
-                 button can't nest another button. -->
+            <!-- The wrapper (not the inner button) carries the draggable/drag-event contract and
+                 the chip's own tonal background, so it stays the single element both
+                 drag-and-drop and the row-shift animation key off of, and reads as one merged
+                 chip rather than two adjacent controls; the name button and the edit button are
+                 independent siblings inside it, since a button can't nest another button. -->
             <div
               :ref="(el) => setMealBtnRef(index, el)"
               class="meal-btn"
               data-testid="meal-btn"
               :class="{
                 'meal-btn--empty': !day.recipe,
+                'bg-surface-container-high': day.recipe,
                 'meal-btn--dragging': draggingIndex === index,
                 'meal-btn--drop-target': dragOverRowIndex === index,
               }"
@@ -386,43 +387,35 @@ defineExpose({ editDialog, editDialogDate })
               @dragend="onDragEnd"
             >
               <!-- An empty day now offers to fill itself rather than rendering as a
-                   disabled-looking blank button. -->
+                   disabled-looking blank button; the plus indicator lives in the trailing icon
+                   button below, so this stays a plain (if blank) tap target for it. -->
               <v-btn
-                variant="tonal"
+                variant="text"
                 density="compact"
                 class="meal-name-btn"
-                :color="day.recipe ? undefined : 'primary'"
-                :prepend-icon="day.recipe ? undefined : mdiPlus"
                 @click="
                   day.recipe
                     ? router.push({ name: 'recipe-detail', params: { id: day.recipe.id } })
                     : openEditDialog(day.iso)
                 "
               >
-                <span class="meal-name-btn__label">{{ day.recipe?.name ?? 'Add meal' }}</span>
+                <span class="meal-name-btn__label">{{ day.recipe?.name }}</span>
               </v-btn>
 
-              <v-menu v-if="day.recipe">
-                <template #activator="{ props: menuProps }">
-                  <v-btn
-                    :icon="mdiDotsVertical"
-                    variant="text"
-                    size="small"
-                    class="meal-kebab"
-                    data-testid="meal-kebab"
-                    :aria-label="`More actions for ${day.weekday} ${day.date}`"
-                    v-bind="menuProps"
-                  />
-                </template>
-                <v-list density="compact">
-                  <v-list-item
-                    :prepend-icon="mdiPencil"
-                    title="Edit meal"
-                    data-testid="edit-meal-item"
-                    @click="openEditDialog(day.iso)"
-                  />
-                </v-list>
-              </v-menu>
+              <v-btn
+                :icon="day.recipe ? mdiPencil : mdiPlus"
+                variant="text"
+                density="compact"
+                class="meal-edit-btn"
+                data-testid="meal-edit-btn"
+                :color="day.recipe ? undefined : 'primary'"
+                :aria-label="
+                  day.recipe
+                    ? `Edit meal for ${day.weekday} ${day.date}`
+                    : `Add meal for ${day.weekday} ${day.date}`
+                "
+                @click="openEditDialog(day.iso)"
+              />
             </div>
           </div>
 
@@ -470,7 +463,7 @@ defineExpose({ editDialog, editDialogDate })
       </template>
     </div>
 
-    <v-dialog v-model="noteDialog">
+    <v-dialog v-model="noteDialog" location="top">
       <v-card>
         <v-card-title>{{ noteDialogTitle }}</v-card-title>
         <v-card-text>
@@ -496,7 +489,7 @@ defineExpose({ editDialog, editDialogDate })
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="editDialog">
+    <v-dialog v-model="editDialog" location="top">
       <v-card>
         <v-card-title v-if="editDialogDay">
           Edit meal — {{ editDialogDay.weekday }} {{ editDialogDay.date }}
@@ -588,12 +581,23 @@ defineExpose({ editDialog, editDialogDate })
 .day-label {
   min-width: 0;
 }
-/* The drag source / drop target: a plain flex row housing the name button and the kebab as
-   independent siblings (a button can't nest another button). */
+/* The drag source / drop target: a plain flex row carrying the chip's own tonal background (via
+   the bg-surface-container-high utility class for a filled day, or .meal-btn--empty below for an
+   empty one) and housing the name button and the edit button as independent siblings (a button
+   can't nest another button) — both switch to a transparent `text` variant so this background is
+   the only one visible, reading as one merged chip rather than two adjacent controls. */
 .meal-btn {
   display: flex;
   align-items: center;
   min-width: 0;
+  border-radius: 9999px;
+  padding-inline: 12px;
+}
+/* A low-opacity tint rather than the flat bg-primary-container utility, matching the light tonal
+   look the tonal VBtn variant gave this chip before — a full-strength container colour reads much
+   bolder than that once it fills an entire row rather than just a button. */
+.meal-btn--empty {
+  background-color: rgba(var(--v-theme-primary-container), 0.6);
 }
 .meal-btn[draggable='true'] {
   cursor: grab;
@@ -604,13 +608,13 @@ defineExpose({ editDialog, editDialogDate })
 .meal-btn--drop-target {
   outline: 2px dashed rgb(var(--v-theme-primary));
   outline-offset: 2px;
-  border-radius: 20px;
 }
 .meal-name-btn {
   justify-content: flex-start;
   /* Overrides VBtn's size-derived min-width so the button can shrink with its column. */
   min-width: 0;
   flex: 1 1 auto;
+  padding-inline: 4px;
 }
 /* .v-btn__content is a flex container that centres its children, so text-overflow can never
    apply to it — a long name would overflow both edges and get clipped mid-word. Let it shrink
@@ -625,10 +629,7 @@ defineExpose({ editDialog, editDialogDate })
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.meal-btn--empty .meal-name-btn {
-  opacity: 0.75;
-}
-.meal-kebab {
+.meal-edit-btn {
   flex-shrink: 0;
 }
 /* A near-invisible strip between rows that grows into a solid insertion line while a drag hovers

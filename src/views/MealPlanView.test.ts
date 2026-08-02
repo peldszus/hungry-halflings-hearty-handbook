@@ -3,7 +3,7 @@ import { mount, enableAutoUnmount, flushPromises, DOMWrapper } from '@vue/test-u
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { VAutocomplete } from 'vuetify/components'
-import { mdiStar, mdiChevronLeft, mdiChevronRight } from '@mdi/js'
+import { mdiStar, mdiChevronLeft, mdiChevronRight, mdiPencil, mdiPlus } from '@mdi/js'
 import MealPlanView from './MealPlanView.vue'
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
@@ -379,11 +379,8 @@ describe('MealPlanView recipe assignment', () => {
     expect(mealPlan.getForDate(monday)?.recipeId).toBe(recipe.id)
     expect(wrapper.vm.editDialog).toBe(false)
 
-    // Monday is now filled, so reopen the dialog via its kebab menu to clear the assignment.
-    await wrapper.find('[data-testid="meal-kebab"]').trigger('click')
-    await flushPromises()
-    // The menu's list item is teleported outside the wrapper's own DOM tree.
-    document.querySelector<HTMLElement>('[data-testid="edit-meal-item"]')?.click()
+    // Monday is now filled, so reopen the dialog via its edit button to clear the assignment.
+    await wrapper.find('[data-testid="meal-edit-btn"]').trigger('click')
     await flushPromises()
 
     wrapper.findComponent(VAutocomplete).vm.$emit('update:model-value', null)
@@ -394,7 +391,7 @@ describe('MealPlanView recipe assignment', () => {
   })
 })
 
-describe('MealPlanView meal kebab menu', () => {
+describe('MealPlanView meal edit button', () => {
   beforeEach(() => {
     localStorage.clear()
     setActivePinia(createPinia())
@@ -406,7 +403,7 @@ describe('MealPlanView meal kebab menu', () => {
     vi.useRealTimers()
   })
 
-  it('only shows the kebab on days that have a recipe assigned', async () => {
+  it('shows a pencil icon on a filled day and a plus icon on an empty day', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const recipes = useRecipesStore()
@@ -422,8 +419,10 @@ describe('MealPlanView meal kebab menu', () => {
     const wrapper = mount(MealPlanView, { global: { plugins: [router, pinia] } })
     const rows = wrapper.findAll('[data-testid="meal-btn"]')
 
-    expect(rows[0].find('[data-testid="meal-kebab"]').exists()).toBe(true)
-    expect(rows[1].find('[data-testid="meal-kebab"]').exists()).toBe(false)
+    expect(rows[0].find(iconSelector(mdiPencil)).exists()).toBe(true)
+    expect(rows[0].find(iconSelector(mdiPlus)).exists()).toBe(false)
+    expect(rows[1].find(iconSelector(mdiPlus)).exists()).toBe(true)
+    expect(rows[1].find(iconSelector(mdiPencil)).exists()).toBe(false)
 
     wrapper.unmount()
   })
@@ -450,7 +449,7 @@ describe('MealPlanView meal kebab menu', () => {
     wrapper.unmount()
   })
 
-  it('opens the edit dialog pre-filled with the current recipe via the kebab menu', async () => {
+  it('opens the edit dialog pre-filled with the current recipe via the edit button', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const recipes = useRecipesStore()
@@ -467,10 +466,7 @@ describe('MealPlanView meal kebab menu', () => {
       attachTo: document.body,
     })
 
-    await wrapper.find('[data-testid="meal-kebab"]').trigger('click')
-    await flushPromises()
-    // The menu's list item is teleported outside the wrapper's own DOM tree.
-    document.querySelector<HTMLElement>('[data-testid="edit-meal-item"]')?.click()
+    await wrapper.find('[data-testid="meal-edit-btn"]').trigger('click')
     await flushPromises()
 
     expect(wrapper.vm.editDialog).toBe(true)
@@ -497,10 +493,7 @@ describe('MealPlanView meal kebab menu', () => {
       attachTo: document.body,
     })
 
-    await wrapper.find('[data-testid="meal-kebab"]').trigger('click')
-    await flushPromises()
-    // The menu's list item is teleported outside the wrapper's own DOM tree.
-    document.querySelector<HTMLElement>('[data-testid="edit-meal-item"]')?.click()
+    await wrapper.find('[data-testid="meal-edit-btn"]').trigger('click')
     await flushPromises()
 
     document.querySelector<HTMLElement>('[data-testid="close-edit-dialog"]')?.click()
