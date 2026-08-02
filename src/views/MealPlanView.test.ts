@@ -2,11 +2,13 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount, enableAutoUnmount, flushPromises, DOMWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHashHistory } from 'vue-router'
-import { VAutocomplete } from 'vuetify/components'
+import { VApp, VAutocomplete } from 'vuetify/components'
 import { mdiStar, mdiChevronLeft, mdiChevronRight, mdiPencil, mdiPlus } from '@mdi/js'
 import MealPlanView from './MealPlanView.vue'
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
+import { useSnackbar } from '@/composables/useSnackbar'
+import { useSuggestionMode } from '@/composables/useSuggestionMode'
 
 // The note dialog tests below open a teleported v-dialog; auto-unmounting
 // after each test (rather than an ad-hoc wrapper.unmount()) lets Vuetify
@@ -1136,5 +1138,271 @@ describe('MealPlanView recipe filtering', () => {
     expect(labels.some((t) => t.includes('Plain Rice'))).toBe(false)
 
     wrapper.unmount()
+  })
+})
+
+describe('MealPlanView suggestion mode', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    setActivePinia(createPinia())
+    vi.useFakeTimers()
+    // A Wednesday; the visible week runs Mon 2026-06-15 to Sun 2026-06-21.
+    vi.setSystemTime(new Date('2026-06-17T12:00:00'))
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.useRealTimers()
+    useSuggestionMode().exit()
+    useSnackbar().dismiss()
+  })
+
+  // The suggestion toolbar is a Vuetify layout component (v-bottom-navigation), so unlike the
+  // other tests in this file the view has to be hosted inside a v-app that provides the layout.
+  async function mountView(pinia: ReturnType<typeof createPinia>) {
+    const router = makeRouter()
+    router.push({ name: 'meal-plan' })
+    await router.isReady()
+    return mount(
+      { components: { VApp, MealPlanView }, template: '<v-app><MealPlanView /></v-app>' },
+      { global: { plugins: [router, pinia] }, attachTo: document.body }
+    )
+  }
+
+  type Wrapper = Awaited<ReturnType<typeof mountView>>
+
+  async function enterSuggestionMode(wrapper: Wrapper) {
+    await wrapper.find('[data-testid="suggest-meals-fab"]').trigger('click')
+    await flushPromises()
+  }
+
+  async function pressWand(wrapper: Wrapper) {
+    await wrapper.find('[data-testid="run-suggestions"]').trigger('click')
+    await flushPromises()
+  }
+
+  function checkedStates(wrapper: Wrapper): boolean[] {
+    return wrapper
+      .findAll('[data-testid="day-checkbox"] input')
+      .map((input) => (input.element as HTMLInputElement).checked)
+  }
+
+  function rowTexts(wrapper: Wrapper): string[] {
+    return wrapper.findAll('[data-testid="meal-plan-row"]').map((row) => row.text())
+  }
+
+  it('enters and exits suggestion mode via the FAB and the close button', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const wrapper = await mountView(pinia)
+
+    expect(wrapper.find('[data-testid="suggest-meals-fab"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="suggestion-toolbar"]').exists()).toBe(false)
+
+    await enterSuggestionMode(wrapper)
+    expect(wrapper.find('[data-testid="suggest-meals-fab"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="suggestion-toolbar"]').exists()).toBe(true)
+    expect(wrapper.findAll('[data-testid="day-checkbox"]')).toHaveLength(7)
+
+    await wrapper.find('[data-testid="exit-suggestion-mode"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="suggest-meals-fab"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="suggestion-toolbar"]').exists()).toBe(false)
+    expect(wrapper.findAll('[data-testid="day-checkbox"]')).toHaveLength(0)
+  })
+
+  it('checks empty and day-note days by default, not recipe or meal-note days', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const recipes = useRecipesStore()
+    const mealPlan = useMealPlanStore()
+    const recipe = recipes.addRecipe({ name: 'Alpha', ingredients: [], servings: 2 })
+    mealPlan.assign('2026-06-15', recipe.id) // Monday: recipe
+    mealPlan.setMealNote('2026-06-16', 'eating out') // Tuesday: planned via meal note
+    mealPlan.setDayNote('2026-06-18', 'busy day') // Thursday: day note only, still unplanned
+
+    const wrapper = await mountView(pinia)
+    await enterSuggestionMode(wrapper)
+
+    expect(checkedStates(wrapper)).toEqual([false, false, true, true, true, true, true])
+  })
+
+  it('assigns suggestions to checked days, keeps them checked, and re-rolls', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const recipes = useRecipesStore()
+    recipes.addRecipe({ name: 'Alpha', ingredients: [], servings: 2 })
+    recipes.addRecipe({ name: 'Beta', ingredients: [], servings: 2 })
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0)
+
+    const wrapper = await mountView(pinia)
+    await enterSuggestionMode(wrapper)
+    await pressWand(wrapper)
+
+    // Two recipes fill Monday and Tuesday in pool order; the remaining days stay open.
+    let rows = rowTexts(wrapper)
+    expect(rows[0]).toContain('Alpha')
+    expect(rows[1]).toContain('Beta')
+    expect(useSnackbar().current.value?.text).toContain('5 days')
+    expect(checkedStates(wrapper)).toEqual([true, true, true, true, true, true, true])
+
+    // A re-roll samples again: with the rng now favouring the last candidate, Monday flips.
+    random.mockReturnValue(0.99)
+    await pressWand(wrapper)
+    rows = rowTexts(wrapper)
+    expect(rows[0]).toContain('Beta')
+    expect(rows[1]).toContain('Alpha')
+  })
+
+  it('clears its own stale suggestion on a failed re-roll but never a manual plan', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const recipes = useRecipesStore()
+    const mealPlan = useMealPlanStore()
+    const alpha = recipes.addRecipe({ name: 'Alpha', ingredients: [], servings: 2 })
+    recipes.addRecipe({ name: 'Beta', ingredients: [], servings: 2 })
+    // Sunday is planned by hand before the mode ever starts.
+    mealPlan.assign('2026-06-21', alpha.id)
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+
+    const wrapper = await mountView(pinia)
+    await enterSuggestionMode(wrapper)
+    await pressWand(wrapper)
+    // Sunday's Alpha is taken by the week no-repeat rule, so Monday gets Beta.
+    expect(rowTexts(wrapper)[0]).toContain('Beta')
+
+    // Now include the manually planned Sunday and re-roll with favourites-only active —
+    // no favourites exist, so nothing matches anywhere.
+    await wrapper.findAll('[data-testid="day-checkbox"] input')[6].setValue(true)
+    await wrapper.find('[data-testid="filter-favourites"]').trigger('click')
+    await pressWand(wrapper)
+
+    const rows = rowTexts(wrapper)
+    expect(rows[0]).not.toContain('Beta') // the wand's own Monday suggestion is cleared
+    expect(rows[6]).toContain('Alpha') // the hand-planned Sunday survives
+    expect(useSnackbar().current.value?.text).toContain('No matching recipe')
+  })
+
+  it('restricts suggestions to favourites when the toggle is on', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const recipes = useRecipesStore()
+    const favourite = recipes.addRecipe({ name: 'Fav Curry', ingredients: [], servings: 2 })
+    recipes.addRecipe({ name: 'Plain Rice', ingredients: [], servings: 2 })
+    recipes.toggleFavourite(favourite.id)
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+
+    const wrapper = await mountView(pinia)
+    await enterSuggestionMode(wrapper)
+
+    const toggle = wrapper.find('[data-testid="filter-favourites"]')
+    expect(toggle.attributes('aria-pressed')).toBe('false')
+    await toggle.trigger('click')
+    expect(toggle.attributes('aria-pressed')).toBe('true')
+
+    await pressWand(wrapper)
+    const rows = rowTexts(wrapper).join(' ')
+    expect(rows).toContain('Fav Curry')
+    expect(rows).not.toContain('Plain Rice')
+  })
+
+  it('activates the label filter through the selection dialog', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const recipes = useRecipesStore()
+    recipes.addRecipe({ name: 'Veggie Stew', ingredients: [], labels: ['veggie'], servings: 2 })
+    recipes.addRecipe({ name: 'Fish Pie', ingredients: [], labels: ['fish'], servings: 2 })
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+
+    const wrapper = await mountView(pinia)
+    await enterSuggestionMode(wrapper)
+
+    const toggle = wrapper.find('[data-testid="filter-labels"]')
+    await toggle.trigger('click')
+    await flushPromises()
+
+    // The dialog is teleported outside the wrapper's tree.
+    const chips = Array.from(document.querySelectorAll('.v-dialog .v-chip'))
+    const veggieChip = chips.find((chip) => chip.textContent?.includes('veggie'))
+    expect(veggieChip).toBeDefined()
+    await new DOMWrapper(veggieChip!).trigger('click')
+    await new DOMWrapper(document.querySelector('[data-testid="apply-labels"]')!).trigger('click')
+    await flushPromises()
+    expect(toggle.attributes('aria-pressed')).toBe('true')
+
+    await pressWand(wrapper)
+    const rows = rowTexts(wrapper).join(' ')
+    expect(rows).toContain('Veggie Stew')
+    expect(rows).not.toContain('Fish Pie')
+
+    // Toggling off is immediate; toggling back on re-opens the dialog and cancelling keeps it off.
+    await toggle.trigger('click')
+    expect(toggle.attributes('aria-pressed')).toBe('false')
+    await toggle.trigger('click')
+    await flushPromises()
+    await new DOMWrapper(document.querySelector('[data-testid="cancel-labels"]')!).trigger('click')
+    await flushPromises()
+    expect(toggle.attributes('aria-pressed')).toBe('false')
+  })
+
+  it('disables the label toggle when no labels exist', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useRecipesStore().addRecipe({ name: 'Plain', ingredients: [], servings: 2 })
+
+    const wrapper = await mountView(pinia)
+    await enterSuggestionMode(wrapper)
+
+    expect(wrapper.find('[data-testid="filter-labels"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('re-derives the checked days when navigating weeks in suggestion mode', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const recipes = useRecipesStore()
+    const mealPlan = useMealPlanStore()
+    const recipe = recipes.addRecipe({ name: 'Alpha', ingredients: [], servings: 2 })
+    mealPlan.assign('2026-06-15', recipe.id) // Monday of the visible week
+
+    const wrapper = await mountView(pinia)
+    await enterSuggestionMode(wrapper)
+    expect(checkedStates(wrapper)).toEqual([false, true, true, true, true, true, true])
+
+    clickIconButton(wrapper as unknown as ReturnType<typeof mount>, mdiChevronRight)
+    await flushPromises()
+    // The next week is entirely unplanned, so every day is checked again.
+    expect(checkedStates(wrapper)).toEqual([true, true, true, true, true, true, true])
+  })
+
+  it('ignores swipes that start on the suggestion toolbar', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const wrapper = await mountView(pinia)
+    await enterSuggestionMode(wrapper)
+    const weekLabel = wrapper.find('.flex-grow-1').text()
+
+    await swipe(
+      { x: 200, y: 10 },
+      { x: 20, y: 10 },
+      wrapper.find('[data-testid="suggestion-toolbar"]').element
+    )
+    expect(wrapper.find('.flex-grow-1').text()).toBe(weekLabel)
+
+    // A swipe anywhere else still navigates.
+    await swipe({ x: 200, y: 10 }, { x: 20, y: 10 })
+    expect(wrapper.find('.flex-grow-1').text()).not.toBe(weekLabel)
+  })
+
+  it('exits suggestion mode when the view unmounts', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const wrapper = await mountView(pinia)
+    await enterSuggestionMode(wrapper)
+    expect(useSuggestionMode().active.value).toBe(true)
+
+    wrapper.unmount()
+    expect(useSuggestionMode().active.value).toBe(false)
   })
 })

@@ -4,8 +4,13 @@ import { useRoute } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { mdiHome, mdiBookOpenVariant, mdiCalendarMonth, mdiCart } from '@mdi/js'
 import AppMenu from './AppMenu.vue'
+import { useSuggestionMode } from '@/composables/useSuggestionMode'
 
 const route = useRoute()
+
+// While the meal plan's suggestion mode is active, its contextual toolbar takes over the
+// bottom slot (M3 contextual-bar pattern), so the navigation bar steps aside.
+const { active: suggestionModeActive } = useSuggestionMode()
 
 // Material 3 picks the navigation pattern by window size class: a navigation bar at compact
 // widths, a rail at medium, and an expanded drawer at large.
@@ -43,7 +48,12 @@ const activeNav = computed(() => route.meta.nav ?? 'home')
     </v-list>
   </v-navigation-drawer>
 
-  <v-bottom-navigation v-else :model-value="activeNav" grow color="primary">
+  <v-bottom-navigation
+    v-else-if="!suggestionModeActive"
+    :model-value="activeNav"
+    grow
+    color="primary"
+  >
     <v-btn
       v-for="destination in destinations"
       :key="destination.value"

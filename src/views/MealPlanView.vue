@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   mdiChevronLeft,
@@ -8,12 +8,22 @@ import {
   mdiStar,
   mdiNoteTextOutline,
   mdiPlus,
+  mdiAutoFix,
+  mdiClose,
+  mdiHistory,
+  mdiStarOutline,
+  mdiPodium,
+  mdiLabelOutline,
+  mdiRepeatOff,
 } from '@mdi/js'
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
+import { useSnackbar } from '@/composables/useSnackbar'
+import { useSuggestionMode } from '@/composables/useSuggestionMode'
 import { highlightInfixMatches } from '@/utils/highlight'
 import { computeSwapShifts, computeMoveShifts } from '@/utils/dragShift'
 import { formatAssignmentUsageLines } from '@/utils/relativeTime'
+import { suggestMeals } from '@/utils/mealSuggestion'
 
 const router = useRouter()
 const recipesStore = useRecipesStore()
@@ -28,6 +38,9 @@ const mealListEl = ref<HTMLElement | null>(null)
 
 watch(weekOffset, async (newOffset, oldOffset) => {
   if (editDialog.value) closeEditDialog()
+  // The checked days describe the visible week, so navigating re-derives them; the filter
+  // toggles describe intent and stay as they are.
+  if (suggestionMode.value) checkedDates.value = defaultCheckedDates()
   await nextTick()
   animateWeekTransition(newOffset > oldOffset ? 1 : -1)
 })
@@ -60,9 +73,16 @@ function isWithinOverlay(target: EventTarget | null): boolean {
   return target instanceof Element && target.closest('.v-overlay-container') !== null
 }
 
+// The suggestion toolbar sits inside the window-level swipe region, so a swipe starting on one
+// of its buttons must not flip weeks either.
+function isWithinSuggestionToolbar(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest('[data-testid="suggestion-toolbar"]') !== null
+}
+
 function onTouchStart(event: TouchEvent) {
   const touch = event.touches[0]
-  trackingSwipe = !!touch && !isWithinOverlay(event.target)
+  trackingSwipe =
+    !!touch && !isWithinOverlay(event.target) && !isWithinSuggestionToolbar(event.target)
   if (!trackingSwipe || !touch) return
   touchStartX = touch.clientX
   touchStartY = touch.clientY
@@ -396,6 +416,103 @@ function saveNote() {
   noteDialog.value = false
 }
 
+const { visible: snackbarVisible, show: showSnackbar } = useSnackbar()
+const { active: suggestionMode, enter: enterMode, exit: exitMode } = useSuggestionMode()
+
+const checkedDates = ref<string[]>([])
+const suggestionFilters = reactive({
+  recentlyUsed: false,
+  favourites: false,
+  mostOften: false,
+  distinctMainIngredient: false,
+})
+const labelFilterOn = ref(false)
+const selectedLabels = ref<string[]>([])
+const labelDialog = ref(false)
+// Staged separately so cancelling the dialog leaves the applied selection untouched.
+const labelDialogSelection = ref<string[]>([])
+
+// Days the wand itself filled, so a failed re-roll may clear its own stale suggestions without
+// ever deleting a meal the user planned by hand.
+const wandAssigned = new Map<string, string>()
+
+// A day whose meal note already says what is being eaten ("leftovers", "eating out") counts as
+// planned, mirroring the store's isPlanned semantics.
+function defaultCheckedDates(): string[] {
+  return weekDays.value.filter((d) => !d.recipe && !d.mealNote).map((d) => d.iso)
+}
+
+function enterSuggestionMode() {
+  checkedDates.value = defaultCheckedDates()
+  enterMode()
+}
+
+function exitSuggestionMode() {
+  exitMode()
+  suggestionFilters.recentlyUsed = false
+  suggestionFilters.favourites = false
+  suggestionFilters.mostOften = false
+  suggestionFilters.distinctMainIngredient = false
+  labelFilterOn.value = false
+  selectedLabels.value = []
+  wandAssigned.clear()
+}
+
+// Leaving the route must hand the bottom slot back to the navigation bar.
+onUnmounted(exitSuggestionMode)
+
+function onLabelToggleClick() {
+  if (labelFilterOn.value) {
+    // Switching off keeps the selection in memory for the next activation.
+    labelFilterOn.value = false
+    return
+  }
+  labelDialogSelection.value = [...selectedLabels.value]
+  labelDialog.value = true
+}
+
+function applyLabelDialog() {
+  selectedLabels.value = [...labelDialogSelection.value]
+  labelFilterOn.value = selectedLabels.value.length > 0
+  labelDialog.value = false
+}
+
+function runSuggestions() {
+  if (!checkedDates.value.length) {
+    showSnackbar({ text: 'No days selected.' })
+    return
+  }
+  const result = suggestMeals({
+    recipes: recipesStore.recipes,
+    entries: mealPlanStore.entries,
+    selectedDates: checkedDates.value,
+    weekDates: weekDays.value.map((d) => d.iso),
+    referenceDate: todayIso,
+    filters: {
+      ...suggestionFilters,
+      labels: labelFilterOn.value ? selectedLabels.value : [],
+    },
+  })
+  for (const { date, recipeId } of result.assignments) {
+    mealPlanStore.assign(date, recipeId)
+    wandAssigned.set(date, recipeId)
+  }
+  for (const date of result.unmatchedDates) {
+    const current = mealPlanStore.getForDate(date)?.recipeId
+    if (current && wandAssigned.get(date) === current) {
+      mealPlanStore.unassign(date)
+      wandAssigned.delete(date)
+    }
+  }
+  if (result.unmatchedDates.length) {
+    const n = result.unmatchedDates.length
+    showSnackbar({
+      text: `No matching recipe found for ${n} day${n === 1 ? '' : 's'} — try loosening the filters.`,
+    })
+  }
+  // checkedDates stays as it is: pressing the wand again re-rolls the same days.
+}
+
 defineExpose({ editDialog, editDialogDate })
 </script>
 
@@ -440,8 +557,23 @@ defineExpose({ editDialog, editDialogDate })
         >
           <div class="row-grid">
             <div class="day-label">
-              <span class="day-label__weekday font-weight-bold text-body-2">{{ day.weekday }}</span>
-              <span class="text-caption text-medium-emphasis">{{ day.date }}</span>
+              <template v-if="suggestionMode">
+                <v-checkbox-btn
+                  v-model="checkedDates"
+                  :value="day.iso"
+                  data-testid="day-checkbox"
+                  :aria-label="`Suggest a meal for ${day.weekday} ${day.date}`"
+                />
+                <span class="day-label__weekday font-weight-bold text-body-2">
+                  {{ day.weekday }}
+                </span>
+              </template>
+              <template v-else>
+                <span class="day-label__weekday font-weight-bold text-body-2">
+                  {{ day.weekday }}
+                </span>
+                <span class="text-caption text-medium-emphasis">{{ day.date }}</span>
+              </template>
             </div>
 
             <!-- The wrapper (not the inner button) carries the draggable/drag-event contract and
@@ -643,6 +775,134 @@ defineExpose({ editDialog, editDialogDate })
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <v-dialog v-model="labelDialog">
+      <v-card>
+        <v-card-title>Restrict to labels</v-card-title>
+        <v-card-text>
+          <v-chip-group v-model="labelDialogSelection" multiple filter column>
+            <v-chip
+              v-for="label in recipesStore.knownLabels"
+              :key="label"
+              :value="label"
+              color="primary"
+            >
+              {{ label }}
+            </v-chip>
+          </v-chip-group>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" data-testid="cancel-labels" @click="labelDialog = false">
+            Cancel
+          </v-btn>
+          <v-btn
+            variant="text"
+            color="primary"
+            data-testid="apply-labels"
+            :disabled="!labelDialogSelection.length"
+            @click="applyLabelDialog"
+          >
+            Apply
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-btn
+      v-if="!suggestionMode"
+      :icon="mdiAutoFix"
+      color="primary"
+      class="fab"
+      :class="{ 'fab--raised': snackbarVisible }"
+      size="large"
+      elevation="4"
+      aria-label="Suggest meals"
+      data-testid="suggest-meals-fab"
+      @click="enterSuggestionMode"
+    />
+
+    <!-- A genuine layout component, so it takes over the bottom slot the navigation bar yields
+         (see NavBar) and --v-layout-bottom stays truthful for the FAB and snackbar. Each button
+         drives its own active state; the bar's group model stays unbound. -->
+    <v-bottom-navigation
+      v-if="suggestionMode"
+      class="suggestion-toolbar"
+      data-testid="suggestion-toolbar"
+    >
+      <v-btn
+        icon
+        data-testid="filter-recently-used"
+        aria-label="Only recently used recipes"
+        :aria-pressed="suggestionFilters.recentlyUsed"
+        :active="suggestionFilters.recentlyUsed"
+        @click="suggestionFilters.recentlyUsed = !suggestionFilters.recentlyUsed"
+      >
+        <v-icon :icon="mdiHistory" />
+      </v-btn>
+      <v-btn
+        icon
+        data-testid="filter-favourites"
+        aria-label="Only favourite recipes"
+        :aria-pressed="suggestionFilters.favourites"
+        :active="suggestionFilters.favourites"
+        @click="suggestionFilters.favourites = !suggestionFilters.favourites"
+      >
+        <v-icon :icon="mdiStarOutline" />
+      </v-btn>
+      <v-btn
+        icon
+        data-testid="filter-most-often"
+        aria-label="Only recipes cooked most often"
+        :aria-pressed="suggestionFilters.mostOften"
+        :active="suggestionFilters.mostOften"
+        @click="suggestionFilters.mostOften = !suggestionFilters.mostOften"
+      >
+        <v-icon :icon="mdiPodium" />
+      </v-btn>
+      <v-btn
+        icon
+        data-testid="filter-labels"
+        aria-label="Only recipes with selected labels"
+        :aria-pressed="labelFilterOn"
+        :active="labelFilterOn"
+        :disabled="!recipesStore.knownLabels.length"
+        @click="onLabelToggleClick"
+      >
+        <v-icon :icon="mdiLabelOutline" />
+      </v-btn>
+      <v-btn
+        icon
+        data-testid="filter-distinct-main"
+        aria-label="No main ingredient two days in a row"
+        :aria-pressed="suggestionFilters.distinctMainIngredient"
+        :active="suggestionFilters.distinctMainIngredient"
+        @click="
+          suggestionFilters.distinctMainIngredient = !suggestionFilters.distinctMainIngredient
+        "
+      >
+        <v-icon :icon="mdiRepeatOff" />
+      </v-btn>
+      <v-btn
+        icon
+        color="primary"
+        data-testid="run-suggestions"
+        aria-label="Suggest meals for the checked days"
+        :active="false"
+        @click="runSuggestions"
+      >
+        <v-icon :icon="mdiAutoFix" />
+      </v-btn>
+      <v-btn
+        icon
+        data-testid="exit-suggestion-mode"
+        aria-label="Exit suggestion mode"
+        :active="false"
+        @click="exitSuggestionMode"
+      >
+        <v-icon :icon="mdiClose" />
+      </v-btn>
+    </v-bottom-navigation>
   </v-container>
 </template>
 
@@ -671,6 +931,7 @@ defineExpose({ editDialog, editDialogDate })
 }
 .day-label {
   display: flex;
+  align-items: center;
   min-width: 0;
 }
 /* Weekday abbreviations (Mon, Wed, ...) are all 3 letters but not the same visual width, so a
@@ -752,6 +1013,14 @@ defineExpose({ editDialog, editDialogDate })
 }
 .notes-row {
   margin-top: 2px;
+}
+/* Vuetify's bottom-navigation buttons default to an 80px min-width, sized for 3-5 labelled
+   destinations — seven icon-only buttons at 80px overflow a phone viewport and get clipped on
+   both sides. Sharing the width evenly keeps all seven on screen (and the close button, as the
+   last flex item, on the very right). */
+.suggestion-toolbar :deep(.v-btn) {
+  min-width: 44px;
+  flex: 1 1 0;
 }
 .note-field {
   display: flex;
