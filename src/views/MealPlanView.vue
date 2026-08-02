@@ -706,6 +706,18 @@ defineExpose({ editDialog, editDialogDate })
 .meal-edit-btn {
   flex-shrink: 0;
 }
+/* Touch devices simulate :hover on tap and only clear it on the next tap elsewhere (no real
+   hovering pointer to move away with) — a distinct, older mobile-browser quirk from the
+   drag-animation hover mismatch handled in script above, and not fixable by the same JS:
+   touchscreens never fire a real `mousemove`, so that fix's suppression never lifts except via its
+   1s timeout fallback, after which the never-actually-cleared simulated hover reappears. Scoping
+   the state-layer rule to real hover-capable devices removes it at the source for touch instead. */
+@media (hover: none) {
+  .meal-name-btn:hover :deep(.v-btn__overlay),
+  .meal-edit-btn:hover :deep(.v-btn__overlay) {
+    opacity: 0 !important;
+  }
+}
 /* A near-invisible strip between rows that grows into a solid insertion line while a drag hovers
    over it, so users can tell "drop between" apart from "drop on" without extra UI chrome. */
 .insert-zone {
