@@ -110,7 +110,7 @@ const weekDays = computed(() => {
     return {
       iso: date.toISOString().slice(0, 10),
       weekday: date.toLocaleDateString('en-US', { weekday: 'short' }),
-      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      date: `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.`,
       dateWithYear: date.toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
