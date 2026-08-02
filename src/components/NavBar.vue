@@ -48,8 +48,13 @@ const activeNav = computed(() => route.meta.nav ?? 'home')
     </v-list>
   </v-navigation-drawer>
 
+  <!-- `name` is the bar's layout-item id, which VBottomNavigation defaults to the shared value
+       'bottom-navigation'. It must stay distinct from the meal plan's suggestion toolbar: with
+       colliding ids, swapping the two bars corrupts Vuetify's layout registry and collapses
+       --v-layout-bottom to 0 until a reload. -->
   <v-bottom-navigation
     v-else-if="!suggestionModeActive"
+    name="main-bottom-nav"
     :model-value="activeNav"
     grow
     color="primary"

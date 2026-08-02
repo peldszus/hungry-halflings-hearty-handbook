@@ -824,9 +824,12 @@ defineExpose({ editDialog, editDialogDate })
 
     <!-- A genuine layout component, so it takes over the bottom slot the navigation bar yields
          (see NavBar) and --v-layout-bottom stays truthful for the FAB and snackbar. Each button
-         drives its own active state; the bar's group model stays unbound. -->
+         drives its own active state; the bar's group model stays unbound. `name` (the layout-item
+         id) must stay distinct from NavBar's bar — both are VBottomNavigations, which otherwise
+         share the default id 'bottom-navigation' and corrupt the layout registry when swapped. -->
     <v-bottom-navigation
       v-if="suggestionMode"
+      name="suggestion-toolbar"
       class="suggestion-toolbar"
       data-testid="suggestion-toolbar"
     >

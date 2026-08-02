@@ -3,8 +3,9 @@ import { mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import { createPinia } from 'pinia'
 import { createRouter, createWebHashHistory } from 'vue-router'
-import { VApp } from 'vuetify/components'
+import { VApp, VMain } from 'vuetify/components'
 import NavBar from './NavBar.vue'
+import MealPlanView from '@/views/MealPlanView.vue'
 import router from '@/router'
 import { useSuggestionMode } from '@/composables/useSuggestionMode'
 
@@ -109,5 +110,34 @@ describe('NavBar in suggestion mode', () => {
     useSuggestionMode().enter()
     await nextTick()
     expect(wrapper.find('.v-navigation-drawer').exists()).toBe(true)
+  })
+
+  // Regression: both bars are VBottomNavigations, and that component defaults its layout-item
+  // id (the `name` prop) to 'bottom-navigation'. With colliding ids, exiting suggestion mode
+  // re-registers the nav first and then the unmounting toolbar's unregister wiped it from the
+  // layout, collapsing --v-layout-bottom to 0px and dropping the FAB behind the nav until a
+  // reload. This is the only test that mounts both bars inside one layout.
+  it('keeps the layout aware of the bottom navigation after leaving suggestion mode', async () => {
+    setViewportWidth(500)
+    const testRouter = makeRouter()
+    await testRouter.push('/meal-plan')
+    await testRouter.isReady()
+
+    const wrapper = mount(
+      {
+        components: { VApp, VMain, NavBar, MealPlanView },
+        template: '<v-app><NavBar /><v-main><MealPlanView /></v-main></v-app>',
+      },
+      { global: { plugins: [testRouter, createPinia()] } }
+    )
+    await nextTick()
+
+    useSuggestionMode().enter()
+    await nextTick()
+    useSuggestionMode().exit()
+    await nextTick()
+
+    expect(wrapper.find('.v-bottom-navigation').exists()).toBe(true)
+    expect(wrapper.find('.v-main').attributes('style')).toContain('--v-layout-bottom: 56px')
   })
 })
