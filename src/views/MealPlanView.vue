@@ -27,7 +27,7 @@ const editDialogDate = ref('')
 const mealListEl = ref<HTMLElement | null>(null)
 
 watch(weekOffset, async (newOffset, oldOffset) => {
-  editDialog.value = false
+  if (editDialog.value) closeEditDialog()
   await nextTick()
   animateWeekTransition(newOffset > oldOffset ? 1 : -1)
 })
@@ -172,8 +172,9 @@ function openEditDialog(date: string) {
 }
 
 // Clearing the field (the autocomplete's built-in "x") only resets what's being searched for, so
-// the user can pick something else — it doesn't touch the plan. Only picking an actual recipe
-// commits and closes; unassigning is the deliberate, separate "Remove meal" action below.
+// the user can pick something else without it immediately unassigning the day — it doesn't commit
+// on its own. Picking an actual recipe still commits and closes immediately, the fast path for the
+// common case; a field left empty is only applied when the dialog is closed, in closeEditDialog.
 function onEditDialogRecipeChange(value: string | null) {
   editDialogSelection.value = value
   if (!value) return
@@ -184,6 +185,16 @@ function onEditDialogRecipeChange(value: string | null) {
 function removeEditDialogMeal() {
   onRecipeChange(editDialogDate.value, null)
   editDialogSelection.value = null
+  editDialog.value = false
+}
+
+// Closing applies whatever's currently in the field if it differs from what's stored — in
+// practice that only ever means a cleared-then-closed field, since picking a recipe already
+// commits and closes on its own above.
+function closeEditDialog() {
+  if (editDialogSelection.value !== (editDialogDay.value?.selectedRecipeId ?? null)) {
+    onRecipeChange(editDialogDate.value, editDialogSelection.value)
+  }
   editDialog.value = false
 }
 
@@ -626,7 +637,7 @@ defineExpose({ editDialog, editDialogDate })
             Remove meal
           </v-btn>
           <v-spacer />
-          <v-btn variant="text" data-testid="close-edit-dialog" @click="editDialog = false">
+          <v-btn variant="text" data-testid="close-edit-dialog" @click="closeEditDialog">
             Close
           </v-btn>
         </v-card-actions>

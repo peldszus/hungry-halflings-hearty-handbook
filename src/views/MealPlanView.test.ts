@@ -572,6 +572,40 @@ describe('MealPlanView meal edit button', () => {
 
     wrapper.unmount()
   })
+
+  it('unassigns the day when Close is clicked after clearing the field', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const recipes = useRecipesStore()
+    const mealPlan = useMealPlanStore()
+    const recipe = recipes.addRecipe({ name: 'Stew', ingredients: [], servings: 2 })
+    mealPlan.assign('2026-06-15', recipe.id)
+
+    const router = makeRouter()
+    router.push({ name: 'meal-plan' })
+    await router.isReady()
+
+    const wrapper = mount(MealPlanView, {
+      global: { plugins: [router, pinia] },
+      attachTo: document.body,
+    })
+
+    await wrapper.find('[data-testid="meal-edit-btn"]').trigger('click')
+    await flushPromises()
+
+    wrapper.findComponent(VAutocomplete).vm.$emit('update:model-value', null)
+    await flushPromises()
+    // Clearing alone must not have applied yet - see the "only resets the field" test above.
+    expect(mealPlan.getForDate('2026-06-15')?.recipeId).toBe(recipe.id)
+
+    document.querySelector<HTMLElement>('[data-testid="close-edit-dialog"]')?.click()
+    await flushPromises()
+
+    expect(wrapper.vm.editDialog).toBe(false)
+    expect(mealPlan.getForDate('2026-06-15')).toBeUndefined()
+
+    wrapper.unmount()
+  })
 })
 
 describe('MealPlanView day and meal notes', () => {
