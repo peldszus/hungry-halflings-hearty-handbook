@@ -220,6 +220,15 @@ function onDragEnd() {
   draggingIndex.value = null
   dragOverRowIndex.value = null
   dragOverZoneIndex.value = null
+  // The button that started the drag keeps browser focus through the whole gesture (a native
+  // drag never fires a blur on it), and since rows are keyed by date rather than content, that
+  // focus ring stays attached to the calendar slot rather than the dragged meal — it just shows
+  // whatever got swapped into that slot afterward. Clearing it here matches what a normal click
+  // would have done.
+  const activeElement = document.activeElement
+  if (activeElement instanceof HTMLElement && activeElement.closest('.meal-btn')) {
+    activeElement.blur()
+  }
 }
 
 function onRowDragOver(index: number, event: DragEvent) {

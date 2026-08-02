@@ -911,6 +911,34 @@ describe('MealPlanView drag and drop reorder', () => {
     wrapper.unmount()
   })
 
+  it('blurs the dragged button on dragend so it does not keep looking focused after a swap', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const recipes = useRecipesStore()
+    const mealPlan = useMealPlanStore()
+    const stew = recipes.addRecipe({ name: 'Stew', ingredients: [], servings: 2 })
+    const soup = recipes.addRecipe({ name: 'Soup', ingredients: [], servings: 2 })
+    mealPlan.assign(monday, stew.id)
+    mealPlan.assign(tuesday, soup.id)
+
+    const wrapper = await mountView(pinia)
+    const buttons = wrapper.findAll('[data-testid="meal-btn"]')
+
+    // A real drag starts with the browser focusing the button under the pointer, which native
+    // HTML5 drag events never naturally undo.
+    const draggedButton = buttons[0].find('.meal-name-btn').element as HTMLElement
+    draggedButton.focus()
+    expect(document.activeElement).toBe(draggedButton)
+
+    await buttons[0].trigger('dragstart', { dataTransfer: dataTransferStub() })
+    await buttons[1].trigger('drop', { dataTransfer: dataTransferStub() })
+    await buttons[0].trigger('dragend', { dataTransfer: dataTransferStub() })
+
+    expect(document.activeElement).not.toBe(draggedButton)
+
+    wrapper.unmount()
+  })
+
   // jsdom implements neither Element.animate nor window.matchMedia (confirmed while designing
   // this feature), so both are stubbed here purely to observe whether the component *tries* to
   // animate - the row-index math itself is covered directly in dragShift.test.ts.
