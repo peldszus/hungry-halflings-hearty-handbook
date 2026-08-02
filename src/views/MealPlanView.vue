@@ -163,14 +163,27 @@ function onRecipeChange(date: string, value: string | null) {
 }
 
 const editDialogDay = computed(() => weekDays.value.find((d) => d.iso === editDialogDate.value))
+const editDialogSelection = ref<string | null>(null)
 
 function openEditDialog(date: string) {
   editDialogDate.value = date
+  editDialogSelection.value = mealPlanStore.getForDate(date)?.recipeId ?? null
   editDialog.value = true
 }
 
+// Clearing the field (the autocomplete's built-in "x") only resets what's being searched for, so
+// the user can pick something else — it doesn't touch the plan. Only picking an actual recipe
+// commits and closes; unassigning is the deliberate, separate "Remove meal" action below.
 function onEditDialogRecipeChange(value: string | null) {
+  editDialogSelection.value = value
+  if (!value) return
   onRecipeChange(editDialogDate.value, value)
+  editDialog.value = false
+}
+
+function removeEditDialogMeal() {
+  onRecipeChange(editDialogDate.value, null)
+  editDialogSelection.value = null
   editDialog.value = false
 }
 
@@ -371,11 +384,9 @@ defineExpose({ editDialog, editDialogDate })
                  independent siblings inside it, since a button can't nest another button. -->
             <div
               :ref="(el) => setMealBtnRef(index, el)"
-              class="meal-btn"
+              class="meal-btn bg-surface-container-high"
               data-testid="meal-btn"
               :class="{
-                'meal-btn--empty': !day.recipe,
-                'bg-surface-container-high': day.recipe,
                 'meal-btn--dragging': draggingIndex === index,
                 'meal-btn--drop-target': dragOverRowIndex === index,
               }"
@@ -403,7 +414,7 @@ defineExpose({ editDialog, editDialogDate })
               </v-btn>
 
               <v-btn
-                :icon="day.recipe ? mdiPencil : mdiPlus"
+                icon
                 variant="text"
                 density="compact"
                 class="meal-edit-btn"
@@ -415,7 +426,11 @@ defineExpose({ editDialog, editDialogDate })
                     : `Add meal for ${day.weekday} ${day.date}`
                 "
                 @click="openEditDialog(day.iso)"
-              />
+              >
+                <!-- mdiPencil's diagonal silhouette reads taller than mdiPlus's cross at the same
+                     nominal size, so it needs an explicitly smaller size to look equal-weight. -->
+                <v-icon :icon="day.recipe ? mdiPencil : mdiPlus" :size="day.recipe ? 18 : 22" />
+              </v-btn>
             </div>
           </div>
 
@@ -463,7 +478,7 @@ defineExpose({ editDialog, editDialogDate })
       </template>
     </div>
 
-    <v-dialog v-model="noteDialog" location="top">
+    <v-dialog v-model="noteDialog" location="top center">
       <v-card>
         <v-card-title>{{ noteDialogTitle }}</v-card-title>
         <v-card-text>
@@ -489,14 +504,14 @@ defineExpose({ editDialog, editDialogDate })
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="editDialog" location="top">
+    <v-dialog v-model="editDialog" location="top center">
       <v-card>
         <v-card-title v-if="editDialogDay">
           Edit meal — {{ editDialogDay.weekday }} {{ editDialogDay.date }}
         </v-card-title>
         <v-card-text>
           <v-autocomplete
-            :model-value="editDialogDay?.selectedRecipeId ?? null"
+            :model-value="editDialogSelection"
             :items="recipeSelectItems"
             item-title="title"
             item-value="value"
@@ -545,6 +560,15 @@ defineExpose({ editDialog, editDialogDate })
           </v-autocomplete>
         </v-card-text>
         <v-card-actions>
+          <v-btn
+            v-if="editDialogDay?.selectedRecipeId"
+            variant="text"
+            color="error"
+            data-testid="remove-meal"
+            @click="removeEditDialogMeal"
+          >
+            Remove meal
+          </v-btn>
           <v-spacer />
           <v-btn variant="text" data-testid="close-edit-dialog" @click="editDialog = false">
             Close
@@ -581,23 +605,17 @@ defineExpose({ editDialog, editDialogDate })
 .day-label {
   min-width: 0;
 }
-/* The drag source / drop target: a plain flex row carrying the chip's own tonal background (via
-   the bg-surface-container-high utility class for a filled day, or .meal-btn--empty below for an
-   empty one) and housing the name button and the edit button as independent siblings (a button
-   can't nest another button) — both switch to a transparent `text` variant so this background is
-   the only one visible, reading as one merged chip rather than two adjacent controls. */
+/* The drag source / drop target: a plain flex row carrying the chip's own tonal background (the
+   bg-surface-container-high utility class, same for an empty or a filled day) and housing the
+   name button and the edit button as independent siblings (a button can't nest another button) —
+   both switch to a transparent `text` variant so this background is the only one visible, reading
+   as one merged chip rather than two adjacent controls. */
 .meal-btn {
   display: flex;
   align-items: center;
   min-width: 0;
   border-radius: 9999px;
   padding-inline: 12px;
-}
-/* A low-opacity tint rather than the flat bg-primary-container utility, matching the light tonal
-   look the tonal VBtn variant gave this chip before — a full-strength container colour reads much
-   bolder than that once it fills an entire row rather than just a button. */
-.meal-btn--empty {
-  background-color: rgba(var(--v-theme-primary-container), 0.6);
 }
 .meal-btn[draggable='true'] {
   cursor: grab;

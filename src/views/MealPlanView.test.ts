@@ -355,7 +355,7 @@ describe('MealPlanView recipe assignment', () => {
     vi.useRealTimers()
   })
 
-  it('assigns a recipe to a day when one is picked, and unassigns when cleared', async () => {
+  it('assigns a recipe to a day when one is picked', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const recipes = useRecipesStore()
@@ -379,13 +379,81 @@ describe('MealPlanView recipe assignment', () => {
     expect(mealPlan.getForDate(monday)?.recipeId).toBe(recipe.id)
     expect(wrapper.vm.editDialog).toBe(false)
 
-    // Monday is now filled, so reopen the dialog via its edit button to clear the assignment.
+    wrapper.unmount()
+  })
+
+  it('clearing the autocomplete only resets the field, without unassigning or closing', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const recipes = useRecipesStore()
+    const mealPlan = useMealPlanStore()
+    const recipe = recipes.addRecipe({ name: 'Stew', ingredients: [], servings: 2 })
+    const monday = '2026-06-15'
+    mealPlan.assign(monday, recipe.id)
+
+    const router = makeRouter()
+    router.push({ name: 'meal-plan' })
+    await router.isReady()
+
+    const wrapper = mount(MealPlanView, { global: { plugins: [router, pinia] } })
     await wrapper.find('[data-testid="meal-edit-btn"]').trigger('click')
     await flushPromises()
 
     wrapper.findComponent(VAutocomplete).vm.$emit('update:model-value', null)
     await flushPromises()
+
+    expect(mealPlan.getForDate(monday)?.recipeId).toBe(recipe.id)
+    expect(wrapper.vm.editDialog).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  it('unassigns the day and closes the dialog when Remove meal is clicked', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const recipes = useRecipesStore()
+    const mealPlan = useMealPlanStore()
+    const recipe = recipes.addRecipe({ name: 'Stew', ingredients: [], servings: 2 })
+    const monday = '2026-06-15'
+    mealPlan.assign(monday, recipe.id)
+
+    const router = makeRouter()
+    router.push({ name: 'meal-plan' })
+    await router.isReady()
+
+    const wrapper = mount(MealPlanView, {
+      global: { plugins: [router, pinia] },
+      attachTo: document.body,
+    })
+    await wrapper.find('[data-testid="meal-edit-btn"]').trigger('click')
+    await flushPromises()
+
+    // The dialog's actions live in the teleported overlay, outside the wrapper's own DOM tree.
+    document.querySelector<HTMLElement>('[data-testid="remove-meal"]')?.click()
+    await flushPromises()
+
     expect(mealPlan.getForDate(monday)).toBeUndefined()
+    expect(wrapper.vm.editDialog).toBe(false)
+
+    wrapper.unmount()
+  })
+
+  it('does not show Remove meal for an empty day', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const router = makeRouter()
+    router.push({ name: 'meal-plan' })
+    await router.isReady()
+
+    const wrapper = mount(MealPlanView, {
+      global: { plugins: [router, pinia] },
+      attachTo: document.body,
+    })
+    await wrapper.findAll('[data-testid="meal-btn"] button')[0].trigger('click')
+    await flushPromises()
+
+    expect(document.querySelector('[data-testid="remove-meal"]')).toBeNull()
 
     wrapper.unmount()
   })
