@@ -110,7 +110,7 @@ const weekDays = computed(() => {
     return {
       iso: date.toISOString().slice(0, 10),
       weekday: date.toLocaleDateString('en-US', { weekday: 'short' }),
-      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      date: `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.`,
       dateWithYear: date.toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
@@ -440,8 +440,8 @@ defineExpose({ editDialog, editDialogDate })
         >
           <div class="row-grid">
             <div class="day-label">
-              <span class="font-weight-bold text-body-2">{{ day.weekday }}</span>
-              <span class="text-caption text-medium-emphasis ml-1">{{ day.date }}</span>
+              <span class="day-label__weekday font-weight-bold text-body-2">{{ day.weekday }}</span>
+              <span class="text-caption text-medium-emphasis">{{ day.date }}</span>
             </div>
 
             <!-- The wrapper (not the inner button) carries the draggable/drag-event contract and
@@ -670,7 +670,14 @@ defineExpose({ editDialog, editDialogDate })
   column-gap: 12px;
 }
 .day-label {
+  display: flex;
   min-width: 0;
+}
+/* Weekday abbreviations (Mon, Wed, ...) are all 3 letters but not the same visual width, so a
+   shrink-wrapped span would push the date after it sideways from row to row. A fixed-width box
+   keeps the date's starting position constant without widening the day-label column overall. */
+.day-label__weekday {
+  flex: 0 0 36px;
 }
 /* The drag source / drop target: a plain flex row carrying the chip's own tonal background (the
    bg-surface-container-high utility class, same for an empty or a filled day) and housing the
