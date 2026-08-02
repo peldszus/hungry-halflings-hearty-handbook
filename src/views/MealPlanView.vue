@@ -910,6 +910,23 @@ defineExpose({ editDialog, editDialogDate })
 </template>
 
 <style scoped>
+/*
+ * The week-transition animation below translates .meal-plan-list horizontally by a few pixels.
+ * Chromium and Firefox count a transformed box's full extent toward its ancestors' *scrollable*
+ * overflow even though nothing actually reflows, so for the animation's duration the page itself
+ * becomes a few pixels horizontally scrollable. On a touchscreen that overlaps the very swipe
+ * gesture that triggered the animation, and the browser can hand the tail of the gesture off to a
+ * native horizontal scroll/rubber-band of the page — visible as the fixed suggestion toolbar
+ * (and everything else) jerking sideways and snapping back once the transform settles. Clipping
+ * the x-axis on this container stops that overflow from ever reaching the document. overflow-y is
+ * pinned to visible explicitly: setting only overflow-x turns overflow-y into an implicit auto per
+ * the CSS Overflow spec, which would make this element its own vertical scroll container instead
+ * of leaving the page to scroll normally.
+ */
+.v-container {
+  overflow-x: hidden;
+  overflow-y: visible;
+}
 .meal-plan-row + .meal-plan-row {
   margin-top: 6px;
 }
