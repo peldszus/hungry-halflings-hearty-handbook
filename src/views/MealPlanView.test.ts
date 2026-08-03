@@ -1419,8 +1419,8 @@ describe('MealPlanView suggestion mode', () => {
     await enterSuggestionMode(wrapper)
 
     const dialogText = document.querySelector('.v-dialog')?.textContent ?? ''
-    expect(dialogText).toContain('Recently used')
-    expect(dialogText).toContain('No repeat main ingredient')
+    expect(dialogText).toContain('Only recipes used in the plan within the last month')
+    expect(dialogText).toContain('Skip recipes sharing a main ingredient with the day before')
     expect(localStorage.getItem('suggestionGuideSeen')).toBe('true')
   })
 
@@ -1445,7 +1445,9 @@ describe('MealPlanView suggestion mode', () => {
     await wrapper.find('[data-testid="suggestion-help"]').trigger('click')
     await flushPromises()
     expect(wrapper.findComponent(MealPlanView).vm.iconGuideDialog).toBe(true)
-    expect(document.querySelector('.v-dialog')?.textContent).toContain('Favourites')
+    expect(document.querySelector('.v-dialog')?.textContent).toContain(
+      'Only recipes marked as a favourite'
+    )
 
     await new DOMWrapper(document.querySelector('[data-testid="close-icon-guide"]')!).trigger(
       'click'

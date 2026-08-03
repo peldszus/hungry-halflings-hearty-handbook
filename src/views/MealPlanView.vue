@@ -830,31 +830,28 @@ defineExpose({ editDialog, editDialogDate, iconGuideDialog })
             Check the days you want filled, then narrow down the suggestions with these toggles:
           </p>
           <v-list density="compact">
-            <v-list-item :prepend-icon="mdiHistory" title="Recently used">
-              <template #subtitle>Assigned in the plan within the last month</template>
+            <v-list-item :prepend-icon="mdiHistory" lines="two">
+              <template #subtitle>Only recipes used in the plan within the last month</template>
             </v-list-item>
-            <v-list-item :prepend-icon="mdiStarOutline" title="Favourites">
-              <template #subtitle>Marked as favourite</template>
+            <v-list-item :prepend-icon="mdiStarOutline" lines="two">
+              <template #subtitle>Only recipes marked as a favourite</template>
             </v-list-item>
-            <v-list-item :prepend-icon="mdiPodium" title="Cooked most often">
-              <template #subtitle>Among the recipes you've planned most in the past</template>
+            <v-list-item :prepend-icon="mdiPodium" lines="two">
+              <template #subtitle>Only the recipes cooked most often in the past</template>
             </v-list-item>
-            <v-list-item :prepend-icon="mdiLabelOutline" title="Has a label">
-              <template #subtitle>Carries one of the labels you pick</template>
+            <v-list-item :prepend-icon="mdiLabelOutline" lines="two">
+              <template #subtitle>Only recipes carrying a label you pick</template>
             </v-list-item>
-            <v-list-item :prepend-icon="mdiRepeatOff" title="No repeat main ingredient">
-              <template #subtitle>
-                Skips a recipe sharing a main ingredient with the day before (or after, if already
-                planned)
-              </template>
-            </v-list-item>
-            <v-list-item :prepend-icon="mdiAutoFix" title="Suggest meals">
+            <v-list-item :prepend-icon="mdiRepeatOff" lines="two">
               <template #subtitle
-                >Fills the checked days with recipes matching the toggles</template
+                >Skip recipes sharing a main ingredient with the day before</template
               >
             </v-list-item>
-            <v-list-item :prepend-icon="mdiClose" title="Exit suggestion mode">
-              <template #subtitle>Leaves suggestion mode</template>
+            <v-list-item :prepend-icon="mdiAutoFix" lines="two">
+              <template #subtitle>Fill the checked days with matching recipes</template>
+            </v-list-item>
+            <v-list-item :prepend-icon="mdiClose" lines="two">
+              <template #subtitle>Leave suggestion mode</template>
             </v-list-item>
           </v-list>
         </v-card-text>
