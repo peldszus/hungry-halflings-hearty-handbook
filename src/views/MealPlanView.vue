@@ -15,6 +15,7 @@ import {
   mdiPodium,
   mdiLabelOutline,
   mdiRepeatOff,
+  mdiHelpCircleOutline,
 } from '@mdi/js'
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
@@ -445,6 +446,7 @@ function defaultCheckedDates(): string[] {
 function enterSuggestionMode() {
   checkedDates.value = defaultCheckedDates()
   enterMode()
+  if (localStorage.getItem(GUIDE_SEEN_KEY) !== 'true') openIconGuide()
 }
 
 function exitSuggestionMode() {
@@ -475,6 +477,17 @@ function applyLabelDialog() {
   selectedLabels.value = [...labelDialogSelection.value]
   labelFilterOn.value = selectedLabels.value.length > 0
   labelDialog.value = false
+}
+
+// The toolbar's icons are otherwise unexplained on a touch device: hover-only tooltips never
+// fire there, so this dialog is the on-demand (and, once, automatic) explanation of what each
+// one does.
+const GUIDE_SEEN_KEY = 'suggestionGuideSeen'
+const iconGuideDialog = ref(false)
+
+function openIconGuide() {
+  iconGuideDialog.value = true
+  localStorage.setItem(GUIDE_SEEN_KEY, 'true')
 }
 
 function runSuggestions() {
@@ -513,7 +526,7 @@ function runSuggestions() {
   // checkedDates stays as it is: pressing the wand again re-rolls the same days.
 }
 
-defineExpose({ editDialog, editDialogDate })
+defineExpose({ editDialog, editDialogDate, iconGuideDialog })
 </script>
 
 <template>
@@ -809,6 +822,51 @@ defineExpose({ editDialog, editDialogDate })
       </v-card>
     </v-dialog>
 
+    <v-dialog v-model="iconGuideDialog">
+      <v-card>
+        <v-card-title>Suggestion icons</v-card-title>
+        <v-card-text>
+          <p class="mb-3">
+            Check the days you want filled, then narrow down the suggestions with these toggles:
+          </p>
+          <v-list density="compact">
+            <v-list-item :prepend-icon="mdiHistory" title="Recently used">
+              <template #subtitle>Assigned in the plan within the last month</template>
+            </v-list-item>
+            <v-list-item :prepend-icon="mdiStarOutline" title="Favourites">
+              <template #subtitle>Marked as favourite</template>
+            </v-list-item>
+            <v-list-item :prepend-icon="mdiPodium" title="Cooked most often">
+              <template #subtitle>Among the recipes you've planned most in the past</template>
+            </v-list-item>
+            <v-list-item :prepend-icon="mdiLabelOutline" title="Has a label">
+              <template #subtitle>Carries one of the labels you pick</template>
+            </v-list-item>
+            <v-list-item :prepend-icon="mdiRepeatOff" title="No repeat main ingredient">
+              <template #subtitle>
+                Skips a recipe sharing a main ingredient with the day before (or after, if already
+                planned)
+              </template>
+            </v-list-item>
+            <v-list-item :prepend-icon="mdiAutoFix" title="Suggest meals">
+              <template #subtitle
+                >Fills the checked days with recipes matching the toggles</template
+              >
+            </v-list-item>
+            <v-list-item :prepend-icon="mdiClose" title="Exit suggestion mode">
+              <template #subtitle>Leaves suggestion mode</template>
+            </v-list-item>
+          </v-list>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" data-testid="close-icon-guide" @click="iconGuideDialog = false">
+            Got it
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <v-btn
       v-if="!suggestionMode"
       :icon="mdiAutoFix"
@@ -885,6 +943,15 @@ defineExpose({ editDialog, editDialogDate })
         "
       >
         <v-icon :icon="mdiRepeatOff" />
+      </v-btn>
+      <v-btn
+        icon
+        data-testid="suggestion-help"
+        aria-label="Explain these icons"
+        :active="false"
+        @click="openIconGuide"
+      >
+        <v-icon :icon="mdiHelpCircleOutline" />
       </v-btn>
       <v-btn
         icon

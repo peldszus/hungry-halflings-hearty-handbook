@@ -1144,6 +1144,9 @@ describe('MealPlanView recipe filtering', () => {
 describe('MealPlanView suggestion mode', () => {
   beforeEach(() => {
     localStorage.clear()
+    // Seeded so entering suggestion mode in these tests doesn't also trigger the first-time
+    // icon guide dialog; that behaviour has its own dedicated tests below.
+    localStorage.setItem('suggestionGuideSeen', 'true')
     setActivePinia(createPinia())
     vi.useFakeTimers()
     // A Wednesday; the visible week runs Mon 2026-06-15 to Sun 2026-06-21.
@@ -1404,5 +1407,50 @@ describe('MealPlanView suggestion mode', () => {
 
     wrapper.unmount()
     expect(useSuggestionMode().active.value).toBe(false)
+  })
+
+  it('opens the icon guide automatically the first time suggestion mode is entered', async () => {
+    // Unlike the rest of this block, the guide must never have been seen before.
+    localStorage.removeItem('suggestionGuideSeen')
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const wrapper = await mountView(pinia)
+    await enterSuggestionMode(wrapper)
+
+    const dialogText = document.querySelector('.v-dialog')?.textContent ?? ''
+    expect(dialogText).toContain('Recently used')
+    expect(dialogText).toContain('No repeat main ingredient')
+    expect(localStorage.getItem('suggestionGuideSeen')).toBe('true')
+  })
+
+  it('does not reopen the icon guide once it has been seen', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const wrapper = await mountView(pinia)
+    await enterSuggestionMode(wrapper)
+
+    expect(wrapper.findComponent(MealPlanView).vm.iconGuideDialog).toBe(false)
+  })
+
+  it('reopens the icon guide on demand and dismisses it via "Got it"', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const wrapper = await mountView(pinia)
+    await enterSuggestionMode(wrapper)
+    expect(wrapper.findComponent(MealPlanView).vm.iconGuideDialog).toBe(false)
+
+    await wrapper.find('[data-testid="suggestion-help"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.findComponent(MealPlanView).vm.iconGuideDialog).toBe(true)
+    expect(document.querySelector('.v-dialog')?.textContent).toContain('Favourites')
+
+    await new DOMWrapper(document.querySelector('[data-testid="close-icon-guide"]')!).trigger(
+      'click'
+    )
+    await flushPromises()
+    expect(wrapper.findComponent(MealPlanView).vm.iconGuideDialog).toBe(false)
   })
 })
