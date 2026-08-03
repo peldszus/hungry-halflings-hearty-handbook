@@ -941,9 +941,15 @@ defineExpose({ editDialog, editDialogDate, iconGuideDialog })
       >
         <v-icon :icon="mdiRepeatOff" />
       </v-btn>
+      <!-- v-bottom-navigation puts every child button into an implicit toggle-selection group,
+           and VBtn only paints its own `color` prop when that button is the group's "selected"
+           one — since nothing here ever binds model-value, that's never true, so a plain
+           color/variant prop is silently ignored. Painted directly instead (same pattern as
+           .meal-plan-row--today below) so the wand reads as a filled green button, matching the
+           FAB it mirrors. -->
       <v-btn
         icon
-        color="primary"
+        class="suggestion-wand"
         data-testid="run-suggestions"
         aria-label="Suggest meals for the checked days"
         :active="false"
@@ -1105,6 +1111,13 @@ defineExpose({ editDialog, editDialogDate, iconGuideDialog })
 .suggestion-toolbar :deep(.v-btn) {
   min-width: 44px;
   flex: 1 1 0;
+}
+/* Fills the wand with the same primary green as the FAB it mirrors, and the "on" contrast
+   colour for the icon. Direct properties rather than the color prop: see the template comment
+   on this button for why the prop alone has no effect here. */
+.suggestion-wand {
+  background-color: rgb(var(--v-theme-primary));
+  color: rgb(var(--v-theme-on-primary));
 }
 .note-field {
   display: flex;
