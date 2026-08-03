@@ -151,4 +151,6 @@ export const defaults = {
   VCombobox: { variant: 'outlined' },
   VAutocomplete: { variant: 'outlined' },
   VFileInput: { variant: 'outlined' },
+  // Compact keeps the day checkbox within the meal plan's fixed-width day column.
+  VCheckboxBtn: { density: 'compact' },
 }
