@@ -943,15 +943,6 @@ defineExpose({ editDialog, editDialogDate, iconGuideDialog })
       </v-btn>
       <v-btn
         icon
-        data-testid="suggestion-help"
-        aria-label="Explain these icons"
-        :active="false"
-        @click="openIconGuide"
-      >
-        <v-icon :icon="mdiHelpCircleOutline" />
-      </v-btn>
-      <v-btn
-        icon
         color="primary"
         data-testid="run-suggestions"
         aria-label="Suggest meals for the checked days"
@@ -959,6 +950,15 @@ defineExpose({ editDialog, editDialogDate, iconGuideDialog })
         @click="runSuggestions"
       >
         <v-icon :icon="mdiAutoFix" />
+      </v-btn>
+      <v-btn
+        icon
+        data-testid="suggestion-help"
+        aria-label="Explain these icons"
+        :active="false"
+        @click="openIconGuide"
+      >
+        <v-icon :icon="mdiHelpCircleOutline" />
       </v-btn>
       <v-btn
         icon
