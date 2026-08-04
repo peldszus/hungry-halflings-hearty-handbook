@@ -167,13 +167,13 @@ const tools = [
   display: flex;
   gap: 2px;
   padding: 4px;
-  background: rgba(var(--v-theme-surface-variant));
+  background: rgba(var(--v-theme-surface-container-high));
   border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.12);
   flex-wrap: wrap;
 }
 
 .toolbar-icon {
-  color: var(--v-theme-on-surface-variant);
+  color: var(--v-theme-on-surface);
 }
 
 .markdown-editor :deep(.v-textarea textarea) {

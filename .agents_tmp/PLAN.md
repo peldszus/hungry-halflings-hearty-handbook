@@ -56,8 +56,8 @@ Add an optional `notes` field to the Recipe model that:
   - A textarea bound to the model value
   - Buttons insert markdown syntax around selected text or at cursor position
   - Styled with Vuetify components to match the app's design
-  - **Fix toolbar icon visibility**: The toolbar uses `surface-variant` background which is dark in light mode and light in dark mode. The toolbar button icons must use `color="on-surface-variant"` so they remain visible (dark icons on light bg, light icons on dark bg)
-  - **Fix inline code styling**: The `code` element inside `.notes-content` uses `surface-variant` for background, which is also flipped. Use `surface-container-highest` instead for proper contrast in both themes
+  - **Fix toolbar icon visibility**: Use `surface-container-high` for toolbar background (light gray in light mode, dark gray in dark mode) and `on-surface` for icons (dark in light mode, light in dark mode). This ensures icons are always clearly visible.
+  - **Fix inline code styling**: The `code` element inside `.notes-content` uses `surface-container-highest` for proper contrast in both themes
 - **Reference:** `src/components/MarkdownEditor.vue`
 
 ### Step 3b: Fix RecipeDetailView eslint comment rendering
@@ -138,6 +138,6 @@ Add an optional `notes` field to the Recipe model that:
 - Duplicate a recipe with notes → verify notes are copied
 - Export recipes → import → verify notes survive the round-trip
 - View a recipe with complex markdown (lists, code blocks, links) → verify safe rendering
-- **Verify toolbar icons are visible**: Switch between light and dark modes, toolbar icons should always be clearly visible (dark on light bg, light on dark bg)
+- **Verify toolbar icons are visible**: Switch between light and dark modes, toolbar icons should always be clearly visible. Toolbar uses `surface-container-high` for background and `on-surface` for icons.
 - **Verify inline code styling**: Check that `code` blocks have readable contrast in both light and dark modes
 - **Verify no stray comments**: Ensure no eslint-disable text appears in the rendered notes section
