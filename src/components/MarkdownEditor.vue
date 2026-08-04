@@ -140,7 +140,7 @@ const tools = [
         :title="tool.title"
         @click="tool.action"
       >
-        <v-icon :icon="tool.icon" size="18" color="on-surface-variant" />
+        <v-icon :icon="tool.icon" size="18" class="toolbar-icon" />
       </v-btn>
     </div>
     <v-textarea
@@ -170,6 +170,10 @@ const tools = [
   background: rgba(var(--v-theme-surface-variant));
   border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.12);
   flex-wrap: wrap;
+}
+
+.toolbar-icon {
+  color: var(--v-theme-on-surface-variant);
 }
 
 .markdown-editor :deep(.v-textarea textarea) {
