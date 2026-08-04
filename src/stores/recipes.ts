@@ -19,6 +19,7 @@ export interface Recipe {
   archived: boolean
   favourite: boolean
   url?: string
+  notes?: string
 }
 
 const STORAGE_KEY = 'recipes'

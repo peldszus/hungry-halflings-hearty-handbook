@@ -135,6 +135,99 @@ describe('RecipeDetailView labels', () => {
   })
 })
 
+describe('RecipeDetailView notes', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    setActivePinia(createPinia())
+  })
+
+  it('renders notes as sanitized markdown when provided', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    store.addRecipe({
+      name: 'Pasta',
+      ingredients: [],
+      servings: 2,
+      notes: '**Preparation:**\nCook for 10 minutes',
+    })
+    const id = store.recipes[0].id
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-detail', params: { id } })
+    await router.isReady()
+
+    const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
+    expect(wrapper.text()).toContain('Notes')
+    const notesContent = wrapper.find('.notes-content')
+    expect(notesContent.exists()).toBe(true)
+    // Check that markdown was rendered (bold becomes <strong>)
+    expect(notesContent.html()).toContain('<strong>')
+    expect(notesContent.html()).toContain('Preparation:')
+  })
+
+  it('does not show notes section when recipe has no notes', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    store.addRecipe({ name: 'Plain', ingredients: [], servings: 2 })
+    const id = store.recipes[0].id
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-detail', params: { id } })
+    await router.isReady()
+
+    const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
+    expect(wrapper.text()).not.toContain('Notes')
+    expect(wrapper.find('.notes-content').exists()).toBe(false)
+  })
+
+  it('renders markdown lists in notes', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    store.addRecipe({
+      name: 'Pasta',
+      ingredients: [],
+      servings: 2,
+      notes: 'Steps:\n1. Boil water\n2. Add pasta',
+    })
+    const id = store.recipes[0].id
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-detail', params: { id } })
+    await router.isReady()
+
+    const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
+    const notesContent = wrapper.find('.notes-content')
+    expect(notesContent.html()).toContain('<ol>')
+    expect(notesContent.html()).toContain('<li>')
+  })
+
+  it('sanitizes potentially malicious content in notes', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    store.addRecipe({
+      name: 'Pasta',
+      ingredients: [],
+      servings: 2,
+      notes: '<script>alert("xss")</script>Safe text',
+    })
+    const id = store.recipes[0].id
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-detail', params: { id } })
+    await router.isReady()
+
+    const wrapper = mount(RecipeDetailView, { global: { plugins: [router, pinia] } })
+    const notesContent = wrapper.find('.notes-content')
+    // Script tags should be removed by DOMPurify
+    expect(notesContent.html()).not.toContain('<script>')
+    expect(notesContent.html()).toContain('Safe text')
+  })
+})
+
 describe('RecipeDetailView actions', () => {
   beforeEach(() => {
     localStorage.clear()

@@ -104,6 +104,7 @@ function normalizeRecipe(value: unknown): Recipe | null {
     recipe.labels = value.labels.filter((l): l is string => typeof l === 'string')
   }
   if (typeof value.url === 'string') recipe.url = value.url
+  if (typeof value.notes === 'string') recipe.notes = value.notes
   return recipe
 }
 

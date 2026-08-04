@@ -19,10 +19,26 @@ import {
   mdiCalendarCheck,
   mdiClockEditOutline,
 } from '@mdi/js'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 import { useRecipesStore, type Ingredient } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
 import { formatRelativeTime } from '@/utils/relativeTime'
 import { useSnackbar } from '@/composables/useSnackbar'
+
+// Configure marked for safe output
+marked.setOptions({
+  breaks: true,
+  gfm: true,
+})
+
+function sanitizeMarkdown(text: string): string {
+  const html = marked.parse(text)
+  if (typeof html === 'string') {
+    return DOMPurify.sanitize(html)
+  }
+  return ''
+}
 
 const route = useRoute()
 const router = useRouter()
@@ -118,6 +134,11 @@ function ingredientLabel(ingredient: Ingredient) {
   parts.push(ingredient.ingredient)
   return parts.join(' ')
 }
+
+const notesHtml = computed(() => {
+  if (!recipe.value?.notes) return ''
+  return sanitizeMarkdown(recipe.value.notes)
+})
 </script>
 
 <template>
@@ -257,6 +278,14 @@ function ingredientLabel(ingredient: Ingredient) {
         </v-list-item>
       </v-list>
       <p v-else class="text-body-2 text-medium-emphasis font-italic">No ingredients listed.</p>
+
+      <template v-if="notesHtml">
+        <h2 class="text-subtitle-1 font-weight-bold mb-2 mt-6">Notes</h2>
+        <div class="notes-content">
+          <!-- eslint-disable-next-line vue/no-v-html -->
+          <span v-html="notesHtml" />
+        </div>
+      </template>
     </template>
 
     <p v-else class="text-body-2 text-medium-emphasis font-italic">Recipe not found.</p>
@@ -284,5 +313,53 @@ function ingredientLabel(ingredient: Ingredient) {
    ellipsis — the bullet stays pinned to the first line either way. */
 .ingredient-list :deep(.v-list-item-title) {
   white-space: normal;
+}
+
+/* Markdown content styling */
+.notes-content :deep(h1),
+.notes-content :deep(h2),
+.notes-content :deep(h3) {
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+}
+
+.notes-content :deep(p) {
+  margin-bottom: 0.75em;
+}
+
+.notes-content :deep(ul),
+.notes-content :deep(ol) {
+  margin-bottom: 0.75em;
+  padding-left: 1.5em;
+}
+
+.notes-content :deep(li) {
+  margin-bottom: 0.25em;
+}
+
+.notes-content :deep(code) {
+  font-family: monospace;
+  background: rgba(var(--v-theme-surface-container-highest));
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+.notes-content :deep(pre) {
+  background: rgba(var(--v-theme-surface-container-highest));
+  padding: 0.75em;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin-bottom: 0.75em;
+}
+
+.notes-content :deep(pre code) {
+  background: none;
+  padding: 0;
+}
+
+.notes-content :deep(a) {
+  color: rgb(var(--v-theme-primary));
 }
 </style>
