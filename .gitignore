@@ -5,3 +5,6 @@ coverage/
 *.local
 .DS_Store
 .env*.local
+
+# Agent temporary files
+.agents_tmp/
