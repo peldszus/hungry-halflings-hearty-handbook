@@ -247,6 +247,74 @@ describe('RecipeEditView', () => {
     expect(labelsField.text()).toContain('italian')
   })
 
+  it('prefills existing notes in edit mode', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    store.addRecipe({
+      name: 'Pasta',
+      ingredients: [],
+      servings: 2,
+      notes: '**Preparation:**\nCook for 10 minutes',
+    })
+    const id = store.recipes[0].id
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-edit', params: { id } })
+    await router.isReady()
+
+    const wrapper = mount(RecipeEditView, { global: { plugins: [router, pinia] } })
+    const notesEditor = wrapper.find('[data-testid="notes-editor"] textarea')
+    expect(notesEditor.exists()).toBe(true)
+    expect((notesEditor.element as HTMLTextAreaElement).value).toBe(
+      '**Preparation:**\nCook for 10 minutes'
+    )
+  })
+
+  it('prefills notes when duplicating a recipe', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+    store.addRecipe({
+      name: 'Pasta',
+      ingredients: [],
+      servings: 2,
+      notes: 'Original notes here',
+    })
+    const id = store.recipes[0].id
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-new', query: { duplicateFrom: id } })
+    await router.isReady()
+
+    const wrapper = mount(RecipeEditView, { global: { plugins: [router, pinia] } })
+    const notesEditor = wrapper.find('[data-testid="notes-editor"] textarea')
+    expect(notesEditor.exists()).toBe(true)
+    expect((notesEditor.element as HTMLTextAreaElement).value).toBe('Original notes here')
+  })
+
+  it('saves notes entered in the notes field', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useRecipesStore()
+
+    const router = makeRouter()
+    router.push({ name: 'recipe-new' })
+    await router.isReady()
+
+    const wrapper = mount(RecipeEditView, { global: { plugins: [router, pinia] } })
+    await fieldByTestId(wrapper, 'recipe-name').setValue('Tagged Recipe')
+
+    const notesEditor = wrapper.find('[data-testid="notes-editor"] textarea')
+    await notesEditor.setValue('**Important:** Stir occasionally')
+
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    const newRecipe = store.recipes.find((r) => r.name === 'Tagged Recipe')
+    expect(newRecipe?.notes).toBe('**Important:** Stir occasionally')
+  })
+
   it('adds and removes ingredient rows', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)

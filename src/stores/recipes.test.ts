@@ -188,6 +188,37 @@ describe('recipes store', () => {
     expect(store.getById(created.id)?.url).toBeUndefined()
   })
 
+  it('round-trips the optional notes field', () => {
+    const store = useRecipesStore()
+    const created = store.addRecipe({
+      name: 'Pasta',
+      ingredients: [],
+      servings: 2,
+      notes: '**Preparation:**\n1. Boil water\n2. Add pasta',
+    })
+    expect(store.getById(created.id)?.notes).toBe('**Preparation:**\n1. Boil water\n2. Add pasta')
+
+    store.updateRecipe(created.id, {
+      name: 'Pasta',
+      ingredients: [],
+      servings: 2,
+      notes: undefined,
+    })
+    expect(store.getById(created.id)?.notes).toBeUndefined()
+  })
+
+  it('persists notes to localStorage', () => {
+    const store = useRecipesStore()
+    store.addRecipe({
+      name: 'Soup',
+      ingredients: [],
+      servings: 1,
+      notes: 'Cook slowly for best results',
+    })
+    const saved = JSON.parse(localStorage.getItem('recipes') ?? '[]')
+    expect(saved[0].notes).toBe('Cook slowly for best results')
+  })
+
   it('persists recipes to localStorage', () => {
     const store = useRecipesStore()
     store.addRecipe({ name: 'Soup', ingredients: [ing('water')], servings: 1 })

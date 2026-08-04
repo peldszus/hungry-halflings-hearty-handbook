@@ -164,6 +164,38 @@ describe('parseBackup', () => {
     expect(parseBackup(json)).toHaveProperty('data')
   })
 
+  it('round-trips the notes field', () => {
+    const json = JSON.stringify(
+      buildBackup(
+        [
+          recipe({
+            notes: '**Preparation:**\n1. Boil water\n2. Add pasta',
+          }),
+        ],
+        []
+      )
+    )
+    const result = parseBackup(json)
+    expect('data' in result).toBe(true)
+    if ('data' in result) {
+      expect(result.data.recipes[0].notes).toBe('**Preparation:**\n1. Boil water\n2. Add pasta')
+    }
+  })
+
+  it('leaves notes undefined for legacy recipes without notes field', () => {
+    const legacy = {
+      id: 'legacy-1',
+      name: 'Old Stew',
+      servings: 3,
+      ingredients: [{ ingredient: 'beef' }],
+    }
+    const result = parseBackup(JSON.stringify(buildBackup([legacy as unknown as Recipe], [])))
+    expect('data' in result).toBe(true)
+    if ('data' in result) {
+      expect(result.data.recipes[0].notes).toBeUndefined()
+    }
+  })
+
   it('defaults a missing servings to 1', () => {
     const broken = recipe() as unknown as Record<string, unknown>
     delete broken.servings

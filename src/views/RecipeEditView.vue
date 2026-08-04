@@ -3,6 +3,7 @@ import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { mdiArrowLeft, mdiDelete, mdiPlus } from '@mdi/js'
 import { useRecipesStore, type Ingredient } from '@/stores/recipes'
+import MarkdownEditor from '@/components/MarkdownEditor.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -34,6 +35,7 @@ const labels = ref<string[]>(
       ? [...duplicateSource.value.labels]
       : []
 )
+const notes = ref(existingRecipe.value?.notes ?? duplicateSource.value?.notes ?? '')
 
 const defaultUnitSuggestions = ['g', 'kg', 'ml', 'l']
 const unitSuggestions = computed(() => {
@@ -73,6 +75,7 @@ function currentSnapshot() {
     servings: servings.value,
     url: url.value,
     labels: labels.value,
+    notes: notes.value,
     ingredientRows: ingredientRows.value,
   })
 }
@@ -169,6 +172,7 @@ function save() {
     labels: cleanedLabels,
     servings: parseInt(servings.value, 10) || 1,
     url: url.value.trim() || undefined,
+    notes: notes.value.trim() || undefined,
   }
 
   allowLeave.value = true
@@ -317,6 +321,8 @@ function save() {
           type="url"
           data-testid="recipe-url"
         />
+        <label class="text-body-2 text-medium-emphasis mb-1 d-block">Notes (optional)</label>
+        <MarkdownEditor v-model="notes" class="mb-4" />
         <!-- Sticky so Save stays reachable on a long ingredient list instead of requiring a
              scroll to the bottom of the form. -->
         <div class="save-bar">
