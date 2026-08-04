@@ -56,7 +56,19 @@ Add an optional `notes` field to the Recipe model that:
   - A textarea bound to the model value
   - Buttons insert markdown syntax around selected text or at cursor position
   - Styled with Vuetify components to match the app's design
-- **Reference:** New file `src/components/MarkdownEditor.vue`
+  - **Fix toolbar icon visibility**: The toolbar uses `surface-variant` background which is dark in light mode and light in dark mode. The toolbar button icons must use `color="on-surface-variant"` so they remain visible (dark icons on light bg, light icons on dark bg)
+  - **Fix inline code styling**: The `code` element inside `.notes-content` uses `surface-variant` for background, which is also flipped. Use `surface-container-highest` instead for proper contrast in both themes
+- **Reference:** `src/components/MarkdownEditor.vue`
+
+### Step 3b: Fix RecipeDetailView eslint comment rendering
+
+- **Goal:** Remove the visible eslint-disable comment from rendered output
+- **Method:** The current code has `/* eslint-disable-line vue/no-v-html */` inside the template which renders as visible text. Move the directive to its own line before the element so it doesn't appear as text content:
+  ```vue
+  <!-- eslint-disable-next-line vue/no-v-html -->
+  <div v-html="notesHtml" class="notes-content" />
+  ```
+- **Reference:** `src/views/RecipeDetailView.vue:284-286`
 
 ### Step 4: Update RecipeEditView
 
@@ -115,6 +127,9 @@ Add an optional `notes` field to the Recipe model that:
 8. Legacy recipes (without notes field) continue to work after migration
 9. All existing tests pass
 10. Type checking passes with new notes field
+11. **Toolbar icons are visible in both light and dark modes** - use `on-surface-variant` color for toolbar icons
+12. **Inline code has correct background color in both themes** - use appropriate theme token instead of `surface-variant`
+13. **No eslint-disable comments appear in rendered output** - use proper Vue comment syntax for eslint directives
 
 **Manual testing checklist:**
 
@@ -123,3 +138,6 @@ Add an optional `notes` field to the Recipe model that:
 - Duplicate a recipe with notes → verify notes are copied
 - Export recipes → import → verify notes survive the round-trip
 - View a recipe with complex markdown (lists, code blocks, links) → verify safe rendering
+- **Verify toolbar icons are visible**: Switch between light and dark modes, toolbar icons should always be clearly visible (dark on light bg, light on dark bg)
+- **Verify inline code styling**: Check that `code` blocks have readable contrast in both light and dark modes
+- **Verify no stray comments**: Ensure no eslint-disable text appears in the rendered notes section

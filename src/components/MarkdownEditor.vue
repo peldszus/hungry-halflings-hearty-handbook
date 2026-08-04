@@ -140,7 +140,7 @@ const tools = [
         :title="tool.title"
         @click="tool.action"
       >
-        <v-icon :icon="tool.icon" size="18" />
+        <v-icon :icon="tool.icon" size="18" color="on-surface-variant" />
       </v-btn>
     </div>
     <v-textarea

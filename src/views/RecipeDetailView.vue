@@ -282,7 +282,8 @@ const notesHtml = computed(() => {
       <template v-if="notesHtml">
         <h2 class="text-subtitle-1 font-weight-bold mb-2 mt-6">Notes</h2>
         <div class="notes-content">
-          <span v-html="notesHtml" /> {/* eslint-disable-line vue/no-v-html */}
+          <!-- eslint-disable-next-line vue/no-v-html -->
+          <span v-html="notesHtml" />
         </div>
       </template>
     </template>
@@ -339,14 +340,14 @@ const notesHtml = computed(() => {
 
 .notes-content :deep(code) {
   font-family: monospace;
-  background: rgba(var(--v-theme-surface-variant));
+  background: rgba(var(--v-theme-surface-container-highest));
   padding: 0.1em 0.3em;
   border-radius: 3px;
   font-size: 0.9em;
 }
 
 .notes-content :deep(pre) {
-  background: rgba(var(--v-theme-surface-variant));
+  background: rgba(var(--v-theme-surface-container-highest));
   padding: 0.75em;
   border-radius: 4px;
   overflow-x: auto;
