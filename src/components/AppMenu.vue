@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { mdiDotsVertical, mdiDownload, mdiUpload, mdiPaperclip } from '@mdi/js'
+import { mdiDotsVertical, mdiCog, mdiDownload, mdiUpload, mdiPaperclip } from '@mdi/js'
 import ThemeMenuItems from './ThemeMenuItems.vue'
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
@@ -13,8 +13,14 @@ import {
   type DatabaseStats,
 } from '@/utils/dataTransfer'
 
+const props = defineProps<{
+  iconType?: 'kebab' | 'settings'
+}>()
+
 const recipesStore = useRecipesStore()
 const mealPlanStore = useMealPlanStore()
+
+const menuIcon = computed(() => (props.iconType === 'settings' ? mdiCog : mdiDotsVertical))
 
 const importDialog = ref(false)
 const selectedFile = ref<File | null>(null)
@@ -90,8 +96,8 @@ defineExpose({
 
 <template>
   <v-menu>
-    <template #activator="{ props }">
-      <v-btn :icon="mdiDotsVertical" v-bind="props" aria-label="Menu" />
+    <template #activator="{ props: menuProps }">
+      <v-btn :icon="menuIcon" v-bind="menuProps" aria-label="Menu" />
     </template>
     <v-list density="compact">
       <v-list-subheader>Theme</v-list-subheader>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
-import { mdiArrowLeft, mdiDelete, mdiPlus } from '@mdi/js'
+import { mdiDelete, mdiPlus } from '@mdi/js'
 import { useRecipesStore, type Ingredient } from '@/stores/recipes'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
 
@@ -193,15 +193,7 @@ function save() {
 
 <template>
   <v-container>
-    <v-btn variant="text" :prepend-icon="mdiArrowLeft" class="mb-4 px-0" @click="router.back()">
-      Back
-    </v-btn>
-
     <template v-if="!notFound">
-      <h1 class="text-h6 mb-4">
-        {{ isEditMode ? 'Edit Recipe' : 'Add Recipe' }}
-      </h1>
-
       <v-form @submit.prevent="save">
         <v-text-field
           v-model="name"

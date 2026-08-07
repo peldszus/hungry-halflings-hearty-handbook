@@ -14,10 +14,8 @@ const { visible, current, dismiss } = useSnackbar()
   <v-app>
     <NavBar />
     <v-main>
-      <!-- Material's shared-axis transition between screens. Disabled under
-           prefers-reduced-motion via the CSS below. -->
       <RouterView v-slot="{ Component, route }">
-        <Transition name="screen" mode="out-in">
+        <Transition name="screen">
           <component :is="Component" :key="route.path" />
         </Transition>
       </RouterView>

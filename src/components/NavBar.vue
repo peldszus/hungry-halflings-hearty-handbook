@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
-import { mdiHome, mdiBookOpenVariant, mdiCalendarMonth, mdiCart } from '@mdi/js'
+import { mdiHome, mdiBookOpenVariant, mdiCalendarMonth, mdiCart, mdiArrowLeft } from '@mdi/js'
 import AppMenu from './AppMenu.vue'
 import { useSuggestionMode } from '@/composables/useSuggestionMode'
 
 const route = useRoute()
+const router = useRouter()
 
 // While the meal plan's suggestion mode is active, its contextual toolbar takes over the
 // bottom slot (M3 contextual-bar pattern), so the navigation bar steps aside.
@@ -25,13 +27,41 @@ const destinations = [
 
 // Driven by route meta rather than the path, so /recipes/:id still highlights Recipes.
 const activeNav = computed(() => route.meta.nav ?? 'home')
+
+// Whether to show back button (for non-home routes)
+const showBackButton = computed(() => route.meta.showBackButton)
+
+// The app bar title - shows route title or app name for home
+const appBarTitle = computed(() => {
+  if (route.name === 'home') {
+    return 'Hungry Halflings Hearty Handbook'
+  }
+  return route.meta.title
+})
+
+// Whether to show the settings/menu icon (only on home screen)
+const showSettings = computed(() => route.name === 'home')
+
+function goBack(event: MouseEvent) {
+  const button = event.target as HTMLElement
+  router.back()
+  nextTick(() => button?.blur())
+}
 </script>
 
 <template>
   <v-app-bar :elevation="0" color="surface" scroll-behavior="elevate">
-    <v-app-bar-title class="app-title">Hungry Halflings Hearty Handbook</v-app-bar-title>
-    <template #append>
-      <AppMenu />
+    <v-btn
+      v-if="showBackButton"
+      :icon="mdiArrowLeft"
+      variant="text"
+      class="back-button"
+      aria-label="Go back"
+      @click="goBack"
+    />
+    <v-app-bar-title v-if="appBarTitle" class="app-title">{{ appBarTitle }}</v-app-bar-title>
+    <template v-if="showSettings" #append>
+      <AppMenu icon-type="settings" />
     </template>
   </v-app-bar>
 
@@ -79,5 +109,19 @@ const activeNav = computed(() => route.meta.nav ?? 'home')
  */
 .app-title {
   font-size: clamp(1rem, 4.4vw, 1.25rem);
+}
+
+/* Remove tap highlight and focus styles from back button on mobile */
+.back-button {
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+
+.back-button:focus-visible {
+  outline: none;
+}
+
+.back-button:focus {
+  outline: none;
 }
 </style>

@@ -19,9 +19,9 @@ describe('ShoppingListView', () => {
     setActivePinia(pinia)
   })
 
-  it('renders the heading', () => {
+  it('renders the date range selector', () => {
     const wrapper = mountView(pinia)
-    expect(wrapper.text()).toContain('Shopping List')
+    expect(wrapper.text()).toContain('Select Date Range')
   })
 
   it('does not show the ingredients card until both dates are set', async () => {

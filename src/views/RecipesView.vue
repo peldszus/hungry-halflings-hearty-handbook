@@ -79,8 +79,6 @@ function lastUsedLabel(recipeId: string) {
 
 <template>
   <v-container>
-    <h1 class="text-h5 mb-4">Recipes</h1>
-
     <!-- M3 search bar: filled, fully rounded, no floating label. -->
     <v-text-field
       v-model="searchText"

@@ -69,7 +69,6 @@ const destinations = computed(() => [
 
 <template>
   <v-container>
-    <h1 class="text-h5 mb-2">Meal Planner</h1>
     <p class="text-body-1 text-medium-emphasis mb-6">
       Plan your meals, manage recipes, and build your shopping lists.
     </p>

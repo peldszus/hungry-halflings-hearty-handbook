@@ -27,8 +27,8 @@ describe('HomeView', () => {
     setActivePinia(createPinia())
   })
 
-  it('renders the meal planner heading', () => {
-    expect(mountHome().text()).toContain('Meal Planner')
+  it('renders the intro text', () => {
+    expect(mountHome().text()).toContain('Plan your meals')
   })
 
   describe('navigation card counts', () => {

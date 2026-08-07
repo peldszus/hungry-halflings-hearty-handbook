@@ -2,7 +2,6 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
-  mdiArrowLeft,
   mdiPencil,
   mdiContentCopy,
   mdiStar,
@@ -44,7 +43,7 @@ const route = useRoute()
 const router = useRouter()
 const recipesStore = useRecipesStore()
 const mealPlanStore = useMealPlanStore()
-const { showUndo } = useSnackbar()
+const { visible: snackbarVisible, showUndo } = useSnackbar()
 
 const recipe = computed(() => recipesStore.getById(route.params.id as string))
 
@@ -142,32 +141,10 @@ const notesHtml = computed(() => {
 </script>
 
 <template>
-  <v-container>
-    <v-btn variant="text" :prepend-icon="mdiArrowLeft" class="mb-4 px-0" @click="router.back()">
-      Back
-    </v-btn>
-
-    <template v-if="recipe">
-      <div class="d-flex align-center ga-2 mb-2">
-        <h1 class="text-h6">{{ recipe.name }}</h1>
-        <v-chip v-if="recipe.archived">Archived</v-chip>
-      </div>
-      <!--
-        Editing is the primary action here, so it gets a filled button with a visible label.
-        Favouriting is a state rather than an action, so it stays an icon toggle. The
-        infrequent and destructive actions move into an overflow menu with text labels, which
-        also stops delete sitting adjacent to archive at identical visual weight.
-      -->
-      <div class="d-flex align-center ga-2 mb-4">
-        <v-btn
-          color="primary"
-          :prepend-icon="mdiPencil"
-          data-testid="edit-recipe"
-          @click="router.push({ name: 'recipe-edit', params: { id: recipe.id } })"
-        >
-          Edit
-        </v-btn>
-
+  <template v-if="recipe">
+    <v-container>
+      <div class="d-flex align-center mb-2">
+        <h1 class="text-h6 flex-grow-1">{{ recipe.name }}</h1>
         <v-btn
           :icon="recipe.favourite ? mdiStar : mdiStarOutline"
           variant="text"
@@ -182,8 +159,6 @@ const notesHtml = computed(() => {
             {{ recipe.favourite ? 'Remove from favourites' : 'Add to favourites' }}
           </v-tooltip>
         </v-btn>
-
-        <v-spacer />
 
         <v-menu>
           <template #activator="{ props }">
@@ -219,6 +194,8 @@ const notesHtml = computed(() => {
           </v-list>
         </v-menu>
       </div>
+
+      <v-chip v-if="recipe.archived" class="mb-4">Archived</v-chip>
 
       <div class="d-flex flex-column ga-1 mb-4">
         <div
@@ -281,17 +258,28 @@ const notesHtml = computed(() => {
 
       <template v-if="notesHtml">
         <h2 class="text-subtitle-1 font-weight-bold mb-2 mt-6">Notes</h2>
-        <div class="notes-container rounded-lg px-4 py-3 mb-6">
+        <div class="notes-container rounded-lg px-4 py-3 mb-16">
           <div class="notes-content">
             <!-- eslint-disable-next-line vue/no-v-html -->
             <span v-html="notesHtml" />
           </div>
         </div>
       </template>
-    </template>
+    </v-container>
 
-    <p v-else class="text-body-2 text-medium-emphasis font-italic">Recipe not found.</p>
-  </v-container>
+    <v-btn
+      :icon="mdiPencil"
+      color="primary"
+      class="fab"
+      :class="{ 'fab--raised': snackbarVisible }"
+      size="large"
+      elevation="4"
+      data-testid="edit-recipe"
+      @click="router.push({ name: 'recipe-edit', params: { id: recipe.id } })"
+    />
+  </template>
+
+  <p v-else class="text-body-2 text-medium-emphasis font-italic pa-4">Recipe not found.</p>
 </template>
 
 <style scoped>

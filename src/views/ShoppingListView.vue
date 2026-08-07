@@ -15,8 +15,6 @@ function itemLabel(item: ShoppingListItem) {
 
 <template>
   <v-container>
-    <h1 class="text-h5 mb-4">Shopping List</h1>
-
     <v-card class="mb-4">
       <v-card-title>Select Date Range</v-card-title>
       <v-card-text>
