@@ -40,6 +40,11 @@ const appBarTitle = computed(() => {
 
 // Whether to show the settings/menu icon (only on home screen)
 const showSettings = computed(() => route.name === 'home')
+
+function goBack(event: MouseEvent) {
+  router.back()
+  ;(event.target as HTMLElement)?.blur()
+}
 </script>
 
 <template>
@@ -49,7 +54,7 @@ const showSettings = computed(() => route.name === 'home')
       :icon="mdiArrowLeft"
       variant="text"
       aria-label="Go back"
-      @click="router.back()"
+      @click="goBack"
     />
     <v-app-bar-title v-if="appBarTitle" class="app-title">{{ appBarTitle }}</v-app-bar-title>
     <template v-if="showSettings" #append>
