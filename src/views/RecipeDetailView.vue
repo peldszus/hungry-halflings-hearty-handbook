@@ -43,7 +43,7 @@ const route = useRoute()
 const router = useRouter()
 const recipesStore = useRecipesStore()
 const mealPlanStore = useMealPlanStore()
-const { showUndo } = useSnackbar()
+const { visible: snackbarVisible, showUndo } = useSnackbar()
 
 const recipe = computed(() => recipesStore.getById(route.params.id as string))
 
@@ -270,7 +270,10 @@ const notesHtml = computed(() => {
     <v-btn
       :icon="mdiPencil"
       color="primary"
-      class="edit-fab"
+      class="fab"
+      :class="{ 'fab--raised': snackbarVisible }"
+      size="large"
+      elevation="4"
       data-testid="edit-recipe"
       @click="router.push({ name: 'recipe-edit', params: { id: recipe.id } })"
     />
@@ -354,12 +357,5 @@ const notesHtml = computed(() => {
 
 .notes-content :deep(a) {
   color: rgb(var(--v-theme-primary));
-}
-
-/* Edit FAB — positioned in bottom-right corner, above the bottom navigation */
-.edit-fab {
-  position: fixed !important;
-  right: 16px;
-  bottom: 72px;
 }
 </style>
