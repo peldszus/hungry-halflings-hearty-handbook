@@ -280,8 +280,8 @@ const notesHtml = computed(() => {
       <p v-else class="text-body-2 text-medium-emphasis font-italic">No ingredients listed.</p>
 
       <template v-if="notesHtml">
+        <h2 class="text-subtitle-1 font-weight-bold mb-2 mt-6">Notes</h2>
         <div class="notes-container rounded-lg px-4 py-3 mb-6">
-          <h2 class="text-subtitle-1 font-weight-bold mb-2">Notes</h2>
           <div class="notes-content">
             <!-- eslint-disable-next-line vue/no-v-html -->
             <span v-html="notesHtml" />
