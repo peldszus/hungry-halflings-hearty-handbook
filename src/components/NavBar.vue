@@ -111,8 +111,16 @@ function goBack(event: MouseEvent) {
   font-size: clamp(1rem, 4.4vw, 1.25rem);
 }
 
-/* Remove focus outline from back button on mobile */
-.back-button:focus-visible,
+/* Remove tap highlight and focus styles from back button on mobile */
+.back-button {
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+
+.back-button:focus-visible {
+  outline: none;
+}
+
 .back-button:focus {
   outline: none;
 }
