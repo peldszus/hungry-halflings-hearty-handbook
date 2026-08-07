@@ -281,9 +281,11 @@ const notesHtml = computed(() => {
 
       <template v-if="notesHtml">
         <h2 class="text-subtitle-1 font-weight-bold mb-2 mt-6">Notes</h2>
-        <div class="notes-content">
-          <!-- eslint-disable-next-line vue/no-v-html -->
-          <span v-html="notesHtml" />
+        <div class="notes-container rounded-lg px-4 py-3 mb-6">
+          <div class="notes-content">
+            <!-- eslint-disable-next-line vue/no-v-html -->
+            <span v-html="notesHtml" />
+          </div>
         </div>
       </template>
     </template>
@@ -293,6 +295,12 @@ const notesHtml = computed(() => {
 </template>
 
 <style scoped>
+/* Notes container — tonal background with left accent bar for visual distinction */
+.notes-container {
+  background: rgb(var(--v-theme-surface-container-low));
+  border-left: 4px solid rgb(var(--v-theme-primary));
+}
+
 /* Vuetify pads the item out to a fixed "two-line" min-height and then centers both the
    prepend icon and the content block within that full height. Rows without a chip line
    are shorter than that reserved height, so centering left their (also centered) title
