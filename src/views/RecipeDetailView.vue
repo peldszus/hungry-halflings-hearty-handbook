@@ -2,7 +2,6 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
-  mdiArrowLeft,
   mdiPencil,
   mdiContentCopy,
   mdiStar,
@@ -143,60 +142,59 @@ const notesHtml = computed(() => {
 
 <template>
   <template v-if="recipe">
-    <div class="recipe-detail-header">
-      <v-btn :icon="mdiArrowLeft" aria-label="Go back" variant="text" @click="router.back()" />
-      <span class="recipe-detail-title">{{ recipe.name }}</span>
-      <v-btn
-        :icon="recipe.favourite ? mdiStar : mdiStarOutline"
-        variant="text"
-        :color="recipe.favourite ? 'yellow-darken-2' : undefined"
-        :aria-label="recipe.favourite ? 'Remove from favourites' : 'Add to favourites'"
-        :aria-pressed="recipe.favourite"
-        data-testid="toggle-favourite"
-        @click="toggleFavourite"
-      >
-        <v-icon :icon="recipe.favourite ? mdiStar : mdiStarOutline" />
-        <v-tooltip activator="parent" location="bottom">
-          {{ recipe.favourite ? 'Remove from favourites' : 'Add to favourites' }}
-        </v-tooltip>
-      </v-btn>
-
-      <v-menu>
-        <template #activator="{ props }">
-          <v-btn
-            v-bind="props"
-            :icon="mdiDotsVertical"
-            variant="text"
-            aria-label="More recipe actions"
-            data-testid="recipe-actions"
-          />
-        </template>
-        <v-list>
-          <v-list-item
-            :prepend-icon="mdiContentCopy"
-            title="Duplicate"
-            data-testid="duplicate-recipe"
-            @click="duplicateRecipe"
-          />
-          <v-list-item
-            :prepend-icon="recipe.archived ? mdiArchiveArrowUp : mdiArchiveArrowDown"
-            :title="recipe.archived ? 'Unarchive' : 'Archive'"
-            data-testid="toggle-archive"
-            @click="toggleArchive"
-          />
-          <v-divider class="my-1" />
-          <v-list-item
-            :prepend-icon="mdiDelete"
-            title="Delete"
-            base-color="error"
-            data-testid="delete-recipe"
-            @click="deleteRecipe"
-          />
-        </v-list>
-      </v-menu>
-    </div>
-
     <v-container>
+      <div class="d-flex align-center mb-2">
+        <h1 class="text-h6 flex-grow-1">{{ recipe.name }}</h1>
+        <v-btn
+          :icon="recipe.favourite ? mdiStar : mdiStarOutline"
+          variant="text"
+          :color="recipe.favourite ? 'yellow-darken-2' : undefined"
+          :aria-label="recipe.favourite ? 'Remove from favourites' : 'Add to favourites'"
+          :aria-pressed="recipe.favourite"
+          data-testid="toggle-favourite"
+          @click="toggleFavourite"
+        >
+          <v-icon :icon="recipe.favourite ? mdiStar : mdiStarOutline" />
+          <v-tooltip activator="parent" location="bottom">
+            {{ recipe.favourite ? 'Remove from favourites' : 'Add to favourites' }}
+          </v-tooltip>
+        </v-btn>
+
+        <v-menu>
+          <template #activator="{ props }">
+            <v-btn
+              v-bind="props"
+              :icon="mdiDotsVertical"
+              variant="text"
+              aria-label="More recipe actions"
+              data-testid="recipe-actions"
+            />
+          </template>
+          <v-list>
+            <v-list-item
+              :prepend-icon="mdiContentCopy"
+              title="Duplicate"
+              data-testid="duplicate-recipe"
+              @click="duplicateRecipe"
+            />
+            <v-list-item
+              :prepend-icon="recipe.archived ? mdiArchiveArrowUp : mdiArchiveArrowDown"
+              :title="recipe.archived ? 'Unarchive' : 'Archive'"
+              data-testid="toggle-archive"
+              @click="toggleArchive"
+            />
+            <v-divider class="my-1" />
+            <v-list-item
+              :prepend-icon="mdiDelete"
+              title="Delete"
+              base-color="error"
+              data-testid="delete-recipe"
+              @click="deleteRecipe"
+            />
+          </v-list>
+        </v-menu>
+      </div>
+
       <v-chip v-if="recipe.archived" class="mb-4">Archived</v-chip>
 
       <div class="d-flex flex-column ga-1 mb-4">
@@ -260,7 +258,7 @@ const notesHtml = computed(() => {
 
       <template v-if="notesHtml">
         <h2 class="text-subtitle-1 font-weight-bold mb-2 mt-6">Notes</h2>
-        <div class="notes-container rounded-lg px-4 py-3 mb-6">
+        <div class="notes-container rounded-lg px-4 py-3 mb-16">
           <div class="notes-content">
             <!-- eslint-disable-next-line vue/no-v-html -->
             <span v-html="notesHtml" />
@@ -269,13 +267,10 @@ const notesHtml = computed(() => {
       </template>
     </v-container>
 
-    <v-fab
-      v-if="recipe"
+    <v-btn
       :icon="mdiPencil"
       color="primary"
-      location="bottom end"
-      absolute
-      class="fab"
+      class="edit-fab"
       data-testid="edit-recipe"
       @click="router.push({ name: 'recipe-edit', params: { id: recipe.id } })"
     />
@@ -285,23 +280,6 @@ const notesHtml = computed(() => {
 </template>
 
 <style scoped>
-/* Recipe detail header — aligns with global app bar height */
-.recipe-detail-header {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 0 8px;
-  height: 64px;
-  background: rgb(var(--v-theme-surface));
-  border-bottom: 1px solid rgba(var(--v-theme-outline-variant));
-}
-
-.recipe-detail-title {
-  font-size: 1.25rem;
-  font-weight: 400;
-  flex-grow: 1;
-}
-
 /* Notes container — tonal background with left accent bar for visual distinction */
 .notes-container {
   background: rgb(var(--v-theme-surface-container-low));
@@ -376,5 +354,12 @@ const notesHtml = computed(() => {
 
 .notes-content :deep(a) {
   color: rgb(var(--v-theme-primary));
+}
+
+/* Edit FAB — positioned in bottom-right corner, above the bottom navigation */
+.edit-fab {
+  position: fixed !important;
+  right: 16px;
+  bottom: 72px;
 }
 </style>
