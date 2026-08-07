@@ -44,7 +44,13 @@ const showSettings = computed(() => route.name === 'home')
 
 <template>
   <v-app-bar :elevation="0" color="surface" scroll-behavior="elevate">
-    <v-btn v-if="showBackButton" :icon="mdiArrowLeft" aria-label="Go back" @click="router.back()" />
+    <v-btn
+      v-if="showBackButton"
+      :icon="mdiArrowLeft"
+      variant="text"
+      aria-label="Go back"
+      @click="router.back()"
+    />
     <v-app-bar-title v-if="appBarTitle" class="app-title">{{ appBarTitle }}</v-app-bar-title>
     <template v-if="showSettings" #append>
       <AppMenu icon-type="settings" />
