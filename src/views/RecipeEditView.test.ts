@@ -37,7 +37,7 @@ describe('RecipeEditView', () => {
     setActivePinia(createPinia())
   })
 
-  it('shows the create heading and empty form in create mode', async () => {
+  it('renders the form in create mode', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const router = makeRouter()
@@ -45,10 +45,11 @@ describe('RecipeEditView', () => {
     await router.isReady()
 
     const wrapper = mount(RecipeEditView, { global: { plugins: [router, pinia] } })
-    expect(wrapper.text()).toContain('Add Recipe')
+    expect(wrapper.find('form').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Name')
   })
 
-  it('shows the edit heading and prefilled form in edit mode', async () => {
+  it('renders the prefilled form in edit mode', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useRecipesStore()
@@ -64,7 +65,8 @@ describe('RecipeEditView', () => {
     await router.isReady()
 
     const wrapper = mount(RecipeEditView, { global: { plugins: [router, pinia] } })
-    expect(wrapper.text()).toContain('Edit Recipe')
+    expect(wrapper.find('form').exists()).toBe(true)
+    expect(fieldByTestId(wrapper, 'recipe-name').element.getAttribute('value')).toBe('Pasta')
   })
 
   it('prefills the form from the source recipe when duplicating', async () => {
@@ -88,7 +90,7 @@ describe('RecipeEditView', () => {
 
     const wrapper = mount(RecipeEditView, { global: { plugins: [router, pinia] } })
 
-    expect(wrapper.text()).toContain('Add Recipe')
+    expect(wrapper.find('form').exists()).toBe(true)
     expect(fieldByTestId(wrapper, 'recipe-name').element.getAttribute('value')).toBe(
       'Copy of Pasta'
     )

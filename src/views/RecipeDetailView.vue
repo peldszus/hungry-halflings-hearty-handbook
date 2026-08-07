@@ -142,83 +142,62 @@ const notesHtml = computed(() => {
 </script>
 
 <template>
-  <v-container>
-    <v-btn variant="text" :prepend-icon="mdiArrowLeft" class="mb-4 px-0" @click="router.back()">
-      Back
-    </v-btn>
+  <template v-if="recipe">
+    <div class="recipe-detail-header">
+      <v-btn :icon="mdiArrowLeft" aria-label="Go back" variant="text" @click="router.back()" />
+      <span class="recipe-detail-title">{{ recipe.name }}</span>
+      <v-btn
+        :icon="recipe.favourite ? mdiStar : mdiStarOutline"
+        variant="text"
+        :color="recipe.favourite ? 'yellow-darken-2' : undefined"
+        :aria-label="recipe.favourite ? 'Remove from favourites' : 'Add to favourites'"
+        :aria-pressed="recipe.favourite"
+        data-testid="toggle-favourite"
+        @click="toggleFavourite"
+      >
+        <v-icon :icon="recipe.favourite ? mdiStar : mdiStarOutline" />
+        <v-tooltip activator="parent" location="bottom">
+          {{ recipe.favourite ? 'Remove from favourites' : 'Add to favourites' }}
+        </v-tooltip>
+      </v-btn>
 
-    <template v-if="recipe">
-      <div class="d-flex align-center ga-2 mb-2">
-        <h1 class="text-h6">{{ recipe.name }}</h1>
-        <v-chip v-if="recipe.archived">Archived</v-chip>
-      </div>
-      <!--
-        Editing is the primary action here, so it gets a filled button with a visible label.
-        Favouriting is a state rather than an action, so it stays an icon toggle. The
-        infrequent and destructive actions move into an overflow menu with text labels, which
-        also stops delete sitting adjacent to archive at identical visual weight.
-      -->
-      <div class="d-flex align-center ga-2 mb-4">
-        <v-btn
-          color="primary"
-          :prepend-icon="mdiPencil"
-          data-testid="edit-recipe"
-          @click="router.push({ name: 'recipe-edit', params: { id: recipe.id } })"
-        >
-          Edit
-        </v-btn>
+      <v-menu>
+        <template #activator="{ props }">
+          <v-btn
+            v-bind="props"
+            :icon="mdiDotsVertical"
+            variant="text"
+            aria-label="More recipe actions"
+            data-testid="recipe-actions"
+          />
+        </template>
+        <v-list>
+          <v-list-item
+            :prepend-icon="mdiContentCopy"
+            title="Duplicate"
+            data-testid="duplicate-recipe"
+            @click="duplicateRecipe"
+          />
+          <v-list-item
+            :prepend-icon="recipe.archived ? mdiArchiveArrowUp : mdiArchiveArrowDown"
+            :title="recipe.archived ? 'Unarchive' : 'Archive'"
+            data-testid="toggle-archive"
+            @click="toggleArchive"
+          />
+          <v-divider class="my-1" />
+          <v-list-item
+            :prepend-icon="mdiDelete"
+            title="Delete"
+            base-color="error"
+            data-testid="delete-recipe"
+            @click="deleteRecipe"
+          />
+        </v-list>
+      </v-menu>
+    </div>
 
-        <v-btn
-          :icon="recipe.favourite ? mdiStar : mdiStarOutline"
-          variant="text"
-          :color="recipe.favourite ? 'yellow-darken-2' : undefined"
-          :aria-label="recipe.favourite ? 'Remove from favourites' : 'Add to favourites'"
-          :aria-pressed="recipe.favourite"
-          data-testid="toggle-favourite"
-          @click="toggleFavourite"
-        >
-          <v-icon :icon="recipe.favourite ? mdiStar : mdiStarOutline" />
-          <v-tooltip activator="parent" location="bottom">
-            {{ recipe.favourite ? 'Remove from favourites' : 'Add to favourites' }}
-          </v-tooltip>
-        </v-btn>
-
-        <v-spacer />
-
-        <v-menu>
-          <template #activator="{ props }">
-            <v-btn
-              v-bind="props"
-              :icon="mdiDotsVertical"
-              variant="text"
-              aria-label="More recipe actions"
-              data-testid="recipe-actions"
-            />
-          </template>
-          <v-list>
-            <v-list-item
-              :prepend-icon="mdiContentCopy"
-              title="Duplicate"
-              data-testid="duplicate-recipe"
-              @click="duplicateRecipe"
-            />
-            <v-list-item
-              :prepend-icon="recipe.archived ? mdiArchiveArrowUp : mdiArchiveArrowDown"
-              :title="recipe.archived ? 'Unarchive' : 'Archive'"
-              data-testid="toggle-archive"
-              @click="toggleArchive"
-            />
-            <v-divider class="my-1" />
-            <v-list-item
-              :prepend-icon="mdiDelete"
-              title="Delete"
-              base-color="error"
-              data-testid="delete-recipe"
-              @click="deleteRecipe"
-            />
-          </v-list>
-        </v-menu>
-      </div>
+    <v-container>
+      <v-chip v-if="recipe.archived" class="mb-4">Archived</v-chip>
 
       <div class="d-flex flex-column ga-1 mb-4">
         <div
@@ -288,13 +267,41 @@ const notesHtml = computed(() => {
           </div>
         </div>
       </template>
-    </template>
+    </v-container>
 
-    <p v-else class="text-body-2 text-medium-emphasis font-italic">Recipe not found.</p>
-  </v-container>
+    <v-fab
+      v-if="recipe"
+      :icon="mdiPencil"
+      color="primary"
+      location="bottom end"
+      absolute
+      class="fab"
+      data-testid="edit-recipe"
+      @click="router.push({ name: 'recipe-edit', params: { id: recipe.id } })"
+    />
+  </template>
+
+  <p v-else class="text-body-2 text-medium-emphasis font-italic pa-4">Recipe not found.</p>
 </template>
 
 <style scoped>
+/* Recipe detail header — aligns with global app bar height */
+.recipe-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  height: 64px;
+  background: rgb(var(--v-theme-surface));
+  border-bottom: 1px solid rgba(var(--v-theme-outline-variant));
+}
+
+.recipe-detail-title {
+  font-size: 1.25rem;
+  font-weight: 400;
+  flex-grow: 1;
+}
+
 /* Notes container — tonal background with left accent bar for visual distinction */
 .notes-container {
   background: rgb(var(--v-theme-surface-container-low));

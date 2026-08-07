@@ -564,8 +564,9 @@ describe('RecipeDetailView actions', () => {
 
     expect(router.currentRoute.value.params.id).not.toBe(originalId)
 
-    const backButton = wrapper.findAll('button').find((b) => b.text().includes('Back'))
-    await backButton?.trigger('click')
+    // Navigate back using router (back button is now in global NavBar)
+    router.back()
+    await flushPromises()
 
     await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('recipes'))
   })

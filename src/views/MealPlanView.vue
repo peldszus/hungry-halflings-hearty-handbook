@@ -531,8 +531,6 @@ defineExpose({ editDialog, editDialogDate, iconGuideDialog })
 
 <template>
   <v-container>
-    <h1 class="text-h5 mb-2">Meal Plan</h1>
-
     <div class="d-flex align-center mb-3 ga-2">
       <v-btn
         :icon="mdiChevronLeft"

@@ -11,6 +11,8 @@ declare module 'vue-router' {
     nav?: 'home' | 'recipes' | 'meal-plan' | 'shopping-list'
     /** Screen title, shown in the top app bar. */
     title?: string
+    /** Show back button in app bar. */
+    showBackButton?: boolean
   }
 }
 
@@ -27,37 +29,37 @@ const router = createRouter({
       path: '/recipes',
       name: 'recipes',
       component: () => import('@/views/RecipesView.vue'),
-      meta: { nav: 'recipes', title: 'Recipes' },
+      meta: { nav: 'recipes', title: 'Recipes', showBackButton: true },
     },
     {
       path: '/meal-plan',
       name: 'meal-plan',
       component: () => import('@/views/MealPlanView.vue'),
-      meta: { nav: 'meal-plan', title: 'Meal Plan' },
+      meta: { nav: 'meal-plan', title: 'Meal Plan', showBackButton: true },
     },
     {
       path: '/shopping-list',
       name: 'shopping-list',
       component: () => import('@/views/ShoppingListView.vue'),
-      meta: { nav: 'shopping-list', title: 'Shopping List' },
+      meta: { nav: 'shopping-list', title: 'Shopping List', showBackButton: true },
     },
     {
       path: '/recipes/new',
       name: 'recipe-new',
       component: () => import('@/views/RecipeEditView.vue'),
-      meta: { nav: 'recipes', title: 'Add Recipe' },
+      meta: { nav: 'recipes', title: 'Add Recipe', showBackButton: true },
     },
     {
       path: '/recipes/:id',
       name: 'recipe-detail',
       component: () => import('@/views/RecipeDetailView.vue'),
-      meta: { nav: 'recipes', title: 'Recipe' },
+      meta: { nav: 'recipes', showBackButton: true },
     },
     {
       path: '/recipes/:id/edit',
       name: 'recipe-edit',
       component: () => import('@/views/RecipeEditView.vue'),
-      meta: { nav: 'recipes', title: 'Edit Recipe' },
+      meta: { nav: 'recipes', title: 'Edit Recipe', showBackButton: true },
     },
   ],
 })
