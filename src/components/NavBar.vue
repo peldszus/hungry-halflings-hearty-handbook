@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { mdiHome, mdiBookOpenVariant, mdiCalendarMonth, mdiCart, mdiArrowLeft } from '@mdi/js'
@@ -42,8 +43,9 @@ const appBarTitle = computed(() => {
 const showSettings = computed(() => route.name === 'home')
 
 function goBack(event: MouseEvent) {
+  const button = event.target as HTMLElement
   router.back()
-  ;(event.target as HTMLElement)?.blur()
+  nextTick(() => button?.blur())
 }
 </script>
 
@@ -53,6 +55,7 @@ function goBack(event: MouseEvent) {
       v-if="showBackButton"
       :icon="mdiArrowLeft"
       variant="text"
+      class="back-button"
       aria-label="Go back"
       @click="goBack"
     />
@@ -106,5 +109,11 @@ function goBack(event: MouseEvent) {
  */
 .app-title {
   font-size: clamp(1rem, 4.4vw, 1.25rem);
+}
+
+/* Remove focus outline from back button on mobile */
+.back-button:focus-visible,
+.back-button:focus {
+  outline: none;
 }
 </style>
