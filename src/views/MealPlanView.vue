@@ -1001,9 +1001,13 @@ defineExpose({ editDialog, editDialogDate, iconGuideDialog })
 .meal-plan-row {
   min-height: 40px;
 }
-/* Today is the row users look for first, so it gets a tonal container behind it. */
+/* Today is the row users look for first, so it gets a tonal highlight behind it — the same
+   green tint the selected navigation tab wears, so the colour already reads as "this one" and
+   primary-container (otherwise unused) doesn't introduce a second green. Vuetify paints that
+   tab as the primary colour at `--v-activated-opacity` over the surface; the row sits on the
+   page surface, so the same recipe reproduces it exactly in both themes. */
 .meal-plan-row--today {
-  background: rgba(var(--v-theme-primary-container), 0.6);
+  background: rgba(var(--v-theme-primary), var(--v-activated-opacity));
   border-radius: 12px;
   margin-inline: -8px;
   padding-inline: 8px;
