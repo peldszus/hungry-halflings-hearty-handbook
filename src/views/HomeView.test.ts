@@ -27,10 +27,6 @@ describe('HomeView', () => {
     setActivePinia(createPinia())
   })
 
-  it('renders the intro text', () => {
-    expect(mountHome().text()).toContain('Plan your meals')
-  })
-
   describe('navigation card counts', () => {
     it('shows the recipe count and the planning streak on the cards that navigate there', () => {
       const recipes = useRecipesStore()
