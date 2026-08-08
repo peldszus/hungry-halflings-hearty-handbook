@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { mdiBookOpenVariant, mdiCalendarMonth, mdiCart, mdiChevronRight } from '@mdi/js'
+import {
+  mdiBookOpenVariant,
+  mdiCalendarMonth,
+  mdiCart,
+  mdiChevronRight,
+  mdiPotSteam,
+} from '@mdi/js'
 import { useRecipesStore } from '@/stores/recipes'
 import { useMealPlanStore } from '@/stores/mealPlan'
 import { formatRelativeTime } from '@/utils/relativeTime'
@@ -69,10 +75,6 @@ const destinations = computed(() => [
 
 <template>
   <v-container>
-    <p class="text-body-1 text-medium-emphasis mb-6">
-      Plan your meals, manage recipes, and build your shopping lists.
-    </p>
-
     <!-- Rendered even with nothing planned, where it becomes the prompt to go and plan rather
          than disappearing and leaving the screen with no cue at all. -->
     <v-card
@@ -83,12 +85,15 @@ const destinations = computed(() => [
     >
       <v-card-item>
         <template #prepend>
-          <v-icon :icon="mdiCalendarMonth" />
+          <v-icon :icon="mdiPotSteam" />
         </template>
         <v-card-subtitle class="text-caption">
           {{ nextMeal ? `Next meal · ${nextMeal.when}` : 'Nothing planned' }}
         </v-card-subtitle>
         <v-card-title class="text-body-1">{{ nextMeal?.name ?? 'Plan your week' }}</v-card-title>
+        <template #append>
+          <v-icon :icon="mdiChevronRight" size="small" />
+        </template>
       </v-card-item>
     </v-card>
 
