@@ -141,145 +141,150 @@ const notesHtml = computed(() => {
 </script>
 
 <template>
-  <template v-if="recipe">
-    <v-container>
-      <div class="d-flex align-center mb-2">
-        <h1 class="text-h6 flex-grow-1">{{ recipe.name }}</h1>
+  <!-- Single root: the screen transition in App.vue uses `mode="out-in`, which requires exactly
+       one root element. A fragment root (the v-if/v-else pair this used to be) leaves Vue unable
+       to drive the leave transition, so the next view never mounts and the pane stays blank. -->
+  <div>
+    <template v-if="recipe">
+      <v-container>
+        <div class="d-flex align-center mb-2">
+          <h1 class="text-h6 flex-grow-1">{{ recipe.name }}</h1>
+          <v-btn
+            :icon="recipe.favourite ? mdiStar : mdiStarOutline"
+            variant="text"
+            :color="recipe.favourite ? 'yellow-darken-2' : undefined"
+            :aria-label="recipe.favourite ? 'Remove from favourites' : 'Add to favourites'"
+            :aria-pressed="recipe.favourite"
+            data-testid="toggle-favourite"
+            @click="toggleFavourite"
+          >
+            <v-icon :icon="recipe.favourite ? mdiStar : mdiStarOutline" />
+            <v-tooltip activator="parent" location="bottom">
+              {{ recipe.favourite ? 'Remove from favourites' : 'Add to favourites' }}
+            </v-tooltip>
+          </v-btn>
+
+          <v-menu>
+            <template #activator="{ props }">
+              <v-btn
+                v-bind="props"
+                :icon="mdiDotsVertical"
+                variant="text"
+                aria-label="More recipe actions"
+                data-testid="recipe-actions"
+              />
+            </template>
+            <v-list>
+              <v-list-item
+                :prepend-icon="mdiContentCopy"
+                title="Duplicate"
+                data-testid="duplicate-recipe"
+                @click="duplicateRecipe"
+              />
+              <v-list-item
+                :prepend-icon="recipe.archived ? mdiArchiveArrowUp : mdiArchiveArrowDown"
+                :title="recipe.archived ? 'Unarchive' : 'Archive'"
+                data-testid="toggle-archive"
+                @click="toggleArchive"
+              />
+              <v-divider class="my-1" />
+              <v-list-item
+                :prepend-icon="mdiDelete"
+                title="Delete"
+                base-color="error"
+                data-testid="delete-recipe"
+                @click="deleteRecipe"
+              />
+            </v-list>
+          </v-menu>
+        </div>
+
+        <v-chip v-if="recipe.archived" class="mb-4">Archived</v-chip>
+
+        <div class="d-flex flex-column ga-1 mb-4">
+          <div
+            v-for="item in metadata"
+            :key="item.text"
+            class="d-flex align-center ga-2 text-body-2 text-medium-emphasis"
+          >
+            <v-icon :icon="item.icon" size="small" />
+            <span>{{ item.text }}</span>
+          </div>
+        </div>
+
         <v-btn
-          :icon="recipe.favourite ? mdiStar : mdiStarOutline"
-          variant="text"
-          :color="recipe.favourite ? 'yellow-darken-2' : undefined"
-          :aria-label="recipe.favourite ? 'Remove from favourites' : 'Add to favourites'"
-          :aria-pressed="recipe.favourite"
-          data-testid="toggle-favourite"
-          @click="toggleFavourite"
+          v-if="recipe.url"
+          :href="recipe.url"
+          target="_blank"
+          rel="noopener noreferrer"
+          variant="tonal"
+          size="small"
+          :append-icon="mdiOpenInNew"
+          class="mb-6"
         >
-          <v-icon :icon="recipe.favourite ? mdiStar : mdiStarOutline" />
-          <v-tooltip activator="parent" location="bottom">
-            {{ recipe.favourite ? 'Remove from favourites' : 'Add to favourites' }}
-          </v-tooltip>
+          Open recipe source
         </v-btn>
 
-        <v-menu>
-          <template #activator="{ props }">
-            <v-btn
-              v-bind="props"
-              :icon="mdiDotsVertical"
-              variant="text"
-              aria-label="More recipe actions"
-              data-testid="recipe-actions"
-            />
-          </template>
-          <v-list>
-            <v-list-item
-              :prepend-icon="mdiContentCopy"
-              title="Duplicate"
-              data-testid="duplicate-recipe"
-              @click="duplicateRecipe"
-            />
-            <v-list-item
-              :prepend-icon="recipe.archived ? mdiArchiveArrowUp : mdiArchiveArrowDown"
-              :title="recipe.archived ? 'Unarchive' : 'Archive'"
-              data-testid="toggle-archive"
-              @click="toggleArchive"
-            />
-            <v-divider class="my-1" />
-            <v-list-item
-              :prepend-icon="mdiDelete"
-              title="Delete"
-              base-color="error"
-              data-testid="delete-recipe"
-              @click="deleteRecipe"
-            />
-          </v-list>
-        </v-menu>
-      </div>
-
-      <v-chip v-if="recipe.archived" class="mb-4">Archived</v-chip>
-
-      <div class="d-flex flex-column ga-1 mb-4">
-        <div
-          v-for="item in metadata"
-          :key="item.text"
-          class="d-flex align-center ga-2 text-body-2 text-medium-emphasis"
-        >
-          <v-icon :icon="item.icon" size="small" />
-          <span>{{ item.text }}</span>
+        <div v-if="(recipe.labels ?? []).length" class="d-flex flex-wrap ga-2 mb-6">
+          <v-chip v-for="label in recipe.labels" :key="label" color="primary">
+            {{ label }}
+          </v-chip>
         </div>
-      </div>
 
-      <v-btn
-        v-if="recipe.url"
-        :href="recipe.url"
-        target="_blank"
-        rel="noopener noreferrer"
-        variant="tonal"
-        size="small"
-        :append-icon="mdiOpenInNew"
-        class="mb-6"
-      >
-        Open recipe source
-      </v-btn>
-
-      <div v-if="(recipe.labels ?? []).length" class="d-flex flex-wrap ga-2 mb-6">
-        <v-chip v-for="label in recipe.labels" :key="label" color="primary">
-          {{ label }}
-        </v-chip>
-      </div>
-
-      <h2 class="text-subtitle-1 font-weight-bold mb-2">Ingredients</h2>
-      <v-list v-if="recipe.ingredients.length" lines="two" class="ingredient-list">
-        <v-list-item
-          v-for="(ingredient, index) in recipe.ingredients"
-          :key="index"
-          :prepend-icon="mdiCircleSmall"
-        >
-          <!-- The chips previously sat inside v-list-item-title, which truncates with an
+        <h2 class="text-subtitle-1 font-weight-bold mb-2">Ingredients</h2>
+        <v-list v-if="recipe.ingredients.length" lines="two" class="ingredient-list">
+          <v-list-item
+            v-for="(ingredient, index) in recipe.ingredients"
+            :key="index"
+            :prepend-icon="mdiCircleSmall"
+          >
+            <!-- The chips previously sat inside v-list-item-title, which truncates with an
                ellipsis, so a long ingredient name clipped them off the right edge. They now
                wrap onto their own line. -->
-          <v-list-item-title>{{ ingredientLabel(ingredient) }}</v-list-item-title>
-          <div
-            v-if="ingredient.isMain || ingredient.addToShoppingList"
-            class="d-flex flex-wrap ga-1 mt-1"
-          >
-            <v-chip v-if="ingredient.isMain" size="x-small" color="primary">Main</v-chip>
-            <v-chip
-              v-if="ingredient.addToShoppingList"
-              size="x-small"
-              color="secondary"
-              :prepend-icon="mdiCart"
+            <v-list-item-title>{{ ingredientLabel(ingredient) }}</v-list-item-title>
+            <div
+              v-if="ingredient.isMain || ingredient.addToShoppingList"
+              class="d-flex flex-wrap ga-1 mt-1"
             >
-              Shopping
-            </v-chip>
+              <v-chip v-if="ingredient.isMain" size="x-small" color="primary">Main</v-chip>
+              <v-chip
+                v-if="ingredient.addToShoppingList"
+                size="x-small"
+                color="secondary"
+                :prepend-icon="mdiCart"
+              >
+                Shopping
+              </v-chip>
+            </div>
+          </v-list-item>
+        </v-list>
+        <p v-else class="text-body-2 text-medium-emphasis font-italic">No ingredients listed.</p>
+
+        <template v-if="notesHtml">
+          <h2 class="text-subtitle-1 font-weight-bold mb-2 mt-6">Notes</h2>
+          <div class="notes-container rounded-lg px-4 py-3 mb-16">
+            <div class="notes-content">
+              <!-- eslint-disable-next-line vue/no-v-html -->
+              <span v-html="notesHtml" />
+            </div>
           </div>
-        </v-list-item>
-      </v-list>
-      <p v-else class="text-body-2 text-medium-emphasis font-italic">No ingredients listed.</p>
+        </template>
+      </v-container>
 
-      <template v-if="notesHtml">
-        <h2 class="text-subtitle-1 font-weight-bold mb-2 mt-6">Notes</h2>
-        <div class="notes-container rounded-lg px-4 py-3 mb-16">
-          <div class="notes-content">
-            <!-- eslint-disable-next-line vue/no-v-html -->
-            <span v-html="notesHtml" />
-          </div>
-        </div>
-      </template>
-    </v-container>
+      <v-btn
+        :icon="mdiPencil"
+        color="primary"
+        class="fab"
+        :class="{ 'fab--raised': snackbarVisible }"
+        size="large"
+        elevation="4"
+        data-testid="edit-recipe"
+        @click="router.push({ name: 'recipe-edit', params: { id: recipe.id } })"
+      />
+    </template>
 
-    <v-btn
-      :icon="mdiPencil"
-      color="primary"
-      class="fab"
-      :class="{ 'fab--raised': snackbarVisible }"
-      size="large"
-      elevation="4"
-      data-testid="edit-recipe"
-      @click="router.push({ name: 'recipe-edit', params: { id: recipe.id } })"
-    />
-  </template>
-
-  <p v-else class="text-body-2 text-medium-emphasis font-italic pa-4">Recipe not found.</p>
+    <p v-else class="text-body-2 text-medium-emphasis font-italic pa-4">Recipe not found.</p>
+  </div>
 </template>
 
 <style scoped>
