@@ -15,7 +15,12 @@ const { visible, current, dismiss } = useSnackbar()
     <NavBar />
     <v-main>
       <RouterView v-slot="{ Component, route }">
-        <Transition name="screen">
+        <!-- `mode="out-in"` keeps only one view mounted at a time. Vue's default runs the leave
+             and enter simultaneously, so for the transition's ~200ms two full view subtrees (each
+             with its own FAB) coexist in v-main: the doubled content height forces a large reflow
+             that on mobile Chrome makes the fixed bottom navigation reposition mid-frame ("drops
+             then springs back") and the old and new FABs visibly overlap at the same spot. -->
+        <Transition name="screen" mode="out-in">
           <component :is="Component" :key="route.path" />
         </Transition>
       </RouterView>
