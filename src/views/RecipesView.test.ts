@@ -231,11 +231,13 @@ describe('RecipesView filters', () => {
     expect(names(wrapper).join(' ')).not.toContain('Old Roast')
   })
 
-  it('shows archived recipes once the archived filter is on', async () => {
+  it('narrows to archived recipes only once the archived filter is on', async () => {
     const { wrapper } = await mountView()
     await wrapper.find('[data-testid="filter-archived"]').trigger('click')
 
-    expect(names(wrapper).join(' ')).toContain('Old Roast')
+    const shown = names(wrapper)
+    expect(shown).toHaveLength(1)
+    expect(shown[0]).toContain('Old Roast')
   })
 
   it('narrows to favourites only', async () => {

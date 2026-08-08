@@ -19,7 +19,8 @@ const { visible: snackbarVisible } = useSnackbar()
 const searchText = ref('')
 
 // Filter chips. Archived recipes were previously mixed into the list with only a chip to tell
-// them apart, so they are hidden unless explicitly asked for.
+// them apart, so they are hidden unless explicitly asked for. Every filter narrows the results,
+// so the archived chip shows archived recipes only rather than adding them back in.
 //
 // Selection is held as a flat list of tokens driven by a v-chip-group. VChip's own model-value
 // controls whether the chip is *rendered* (it is the closable-chip mechanism), so it cannot be
@@ -46,7 +47,7 @@ const displayedRecipes = computed(() => {
   const q = searchText.value.trim().toLowerCase()
 
   return store.recentRecipes.filter((r) => {
-    if (!showArchived.value && r.archived) return false
+    if (showArchived.value !== r.archived) return false
     if (favouritesOnly.value && !r.favourite) return false
     if (selectedLabels.value.length && !selectedLabels.value.every((l) => r.labels?.includes(l))) {
       return false
