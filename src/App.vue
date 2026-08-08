@@ -15,7 +15,17 @@ const { visible, current, dismiss } = useSnackbar()
     <NavBar />
     <v-main>
       <RouterView v-slot="{ Component, route }">
-        <Transition name="screen">
+        <!-- `mode="out-in"` keeps only one view mounted at a time. Vue's default runs the leave
+             and enter simultaneously, so for the transition's duration two full view subtrees
+             (each with its own FAB) coexist in v-main: the doubled content height forces a large
+             reflow and the old/new FABs overlap at the same fixed spot.
+
+             The fade is opacity-only — deliberately no `transform`. The FABs live inside the view
+             as `position: fixed`, and per the CSS containing-block spec a transformed ancestor
+             re-anchors fixed descendants to itself rather than the viewport. A translateX on the
+             view would slide every FAB sideways and re-measure its bottom against the view box
+             until the transform clears, which reads as the FAB "shaking" on each navigation. -->
+        <Transition name="screen" mode="out-in">
           <component :is="Component" :key="route.path" />
         </Transition>
       </RouterView>
@@ -36,27 +46,17 @@ const { visible, current, dismiss } = useSnackbar()
 <style>
 .screen-enter-active,
 .screen-leave-active {
-  transition:
-    opacity 150ms ease,
-    transform 200ms cubic-bezier(0.2, 0, 0, 1);
+  transition: opacity 150ms ease;
 }
-.screen-enter-from {
-  opacity: 0;
-  transform: translateX(16px);
-}
+.screen-enter-from,
 .screen-leave-to {
   opacity: 0;
-  transform: translateX(-16px);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .screen-enter-active,
   .screen-leave-active {
     transition: none;
-  }
-  .screen-enter-from,
-  .screen-leave-to {
-    transform: none;
   }
 }
 </style>
